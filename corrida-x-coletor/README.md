@@ -36,7 +36,7 @@ As descartadas continuam na planilha com o motivo, para dar para auditar (igual 
 O modo demonstração usa as 25 provas da "Amostra de calendário de São Paulo" do projeto piloto (cronograma da Prefeitura de 08/10/2026) e alguns casos inventados para mostrar a triagem (um pedal, uma prova em Campinas, uma que já passou, um local desconhecido). As páginas e links são **fictícios** (`agenda.example`, `inscricoes.example`) e a data de "hoje" é fixa em 15/10/2026.
 
 ```powershell
-cd C:\projetos\corrida-x-coletor
+cd C:projetospp-corridarrida-x-coletor
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
