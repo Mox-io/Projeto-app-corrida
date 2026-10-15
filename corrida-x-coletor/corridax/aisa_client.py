@@ -78,6 +78,9 @@ class AisaClient:
             base = _MENSAGENS_HTTP.get(resposta.status_code, f"A AIsa respondeu com erro HTTP {resposta.status_code}.")
             # Só um trecho curto do corpo, para diagnóstico; o header (com a chave) nunca é exibido.
             trecho = resposta.text.strip().replace("\n", " ")[:200]
+            if "model_route_not_supported" in resposta.text or "model_not_found" in resposta.text:
+                base = ("O modelo de IA do .env (AISA_MODEL) não está disponível na sua conta da AIsa. "
+                        "Escolha outro da lista em https://api.aisa.one/v1/models (ex.: gpt-4.1-mini).")
             detalhe = f" Detalhe: {trecho}" if trecho else ""
             raise AisaError(base + detalhe, status=resposta.status_code)
 
