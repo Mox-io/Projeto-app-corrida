@@ -67,7 +67,9 @@ def csv_bytes(itens: list[Item]) -> bytes:
     return buffer.getvalue().encode("utf-8-sig")
 
 
-def calendario_json(itens: list[Item], gerado_em: str) -> dict:
+def calendario_json(itens: list[Item], gerado_em: str, cidade: str = "São Paulo") -> dict:
+    """`cidade` é a do calendário (CITY_NAME): a triagem já descartou as provas de outras cidades,
+    então todas saem com a mesma grafia, que é a que o app do corredor usa para filtrar."""
     provas = []
     for item in itens:
         if item.situacao == "descartada":
@@ -75,7 +77,7 @@ def calendario_json(itens: list[Item], gerado_em: str) -> dict:
         c = item.corrida
         provas.append({
             "id": id_da_prova(c),
-            "nome": c.nome, "data": c.data, "horario": c.horario, "local": c.local, "regiao": c.regiao,
+            "nome": c.nome, "data": c.data, "horario": c.horario, "local": c.local, "cidade": cidade, "regiao": c.regiao,
             "regioes": list(classificar(c.local)[0]),  # chaves para filtrar: ["zona sul", "zona oeste"]
             "distancias": c.distancias, "organizador": c.organizador, "plataforma": c.plataforma,
             "preco": c.preco, "porte": c.porte, "link_inscricao": c.link_inscricao,
@@ -84,10 +86,10 @@ def calendario_json(itens: list[Item], gerado_em: str) -> dict:
             "conferido": item.situacao == "aprovada",
         })
     provas.sort(key=lambda p: (p["data"] or "9999", p["horario"] or "99"))
-    return {"gerado_em": gerado_em, "provas": provas}
+    return {"gerado_em": gerado_em, "cidade": cidade, "provas": provas}
 
 
-def salvar_json(itens: list[Item], destino: Path, gerado_em: str) -> Path:
+def salvar_json(itens: list[Item], destino: Path, gerado_em: str, cidade: str = "São Paulo") -> Path:
     destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text(json.dumps(calendario_json(itens, gerado_em), ensure_ascii=False, indent=2), encoding="utf-8")
+    destino.write_text(json.dumps(calendario_json(itens, gerado_em, cidade), ensure_ascii=False, indent=2), encoding="utf-8")
     return destino

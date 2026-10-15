@@ -17,7 +17,7 @@ O agente faz, sozinho, este fluxo:
 5. **Classifica a região no código** (não no LLM), com a tabela de locais do projeto piloto (Obelisco do Ibirapuera, Parque da Independência, Campo de Marte...) e uma lista de bairros.
 6. **Junta repetidas** (a mesma prova em duas páginas vira uma só, com os campos das duas) e faz a **triagem**.
 7. Marca as provas **temáticas** (Barbie, Disney, super-heróis, Harry Potter...) e **noturnas**, pelo nome e pelo horário (`corridax/tags.py`, lista aberta).
-8. Gera a **planilha-piloto** (`calendario.csv`) e o **calendário em JSON** (`calendario.json`), que a área de administração do app do corredor publica.
+8. Gera a **planilha-piloto** (`calendario.csv`) e o **calendário em JSON** (`calendario.json`), que a área de administração do app do corredor publica. Cada prova sai com a cidade do calendário (`CITY_NAME`), que o app usa para mostrar as provas de cada cidade.
 
 O programa **não publica nada**: ele só monta os arquivos. Confira cada prova no site oficial antes de divulgar.
 

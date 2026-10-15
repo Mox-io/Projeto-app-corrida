@@ -42,10 +42,12 @@ service cloud.firestore {
     match /usuarios/{uid} {
       allow read: if logado();
       allow create, update: if logado() && uid == eu()
-        && soCampos(['nome', 'handle', 'regiao', 'instagram', 'distancias', 'nomeBusca', 'foto', 'atualizadoEm'])
+        && soCampos(['nome', 'handle', 'cidade', 'regiao', 'instagram', 'distancias', 'nomeBusca', 'foto', 'atualizadoEm'])
         && texto(request.resource.data.nome, 2, 60)
         && request.resource.data.handle is string && request.resource.data.handle.matches('^[a-z0-9_.]{3,20}$')
-        && regiao(request.resource.data.regiao)
+        && texto(request.resource.data.cidade, 2, 60)
+        // zona só em São Paulo; nas outras cidades fica vazia
+        && (regiao(request.resource.data.regiao) || request.resource.data.regiao == '')
         && textoOpcional(request.resource.data.instagram, 30)
         && request.resource.data.distancias is list && request.resource.data.distancias.size() <= 4
         && texto(request.resource.data.nomeBusca, 1, 80)

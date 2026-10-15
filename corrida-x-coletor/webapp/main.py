@@ -159,7 +159,7 @@ def criar_app(
 
     @app.post("/api/json")
     def baixar_json(pedido: PedidoTriagem, usuario: str = Depends(obter_usuario)):
-        conteudo = calendario_json(_triar(pedido), dia(pedido.demo).isoformat())
+        conteudo = calendario_json(_triar(pedido), dia(pedido.demo).isoformat(), cfg.city_name)
         return Response(
             json.dumps(conteudo, ensure_ascii=False, indent=2).encode("utf-8"),
             media_type="application/json; charset=utf-8",

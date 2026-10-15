@@ -269,6 +269,8 @@ class TestDemoERelatorio(unittest.TestCase):
         disney = next(p for p in cal["provas"] if p["nome"] == "Disney Magic Run")
         self.assertEqual((disney["tags"], disney["regioes"]), (["tematica"], ["zona sul"]))
         self.assertEqual(len(cal["provas"]), sum(i.situacao != "descartada" for i in itens))
+        self.assertEqual(cal["cidade"], "São Paulo")
+        self.assertTrue(all(p["cidade"] == "São Paulo" for p in cal["provas"]))
 
     def test_cli_demo_grava_arquivos(self):
         with tempfile.TemporaryDirectory() as pasta, redirect_stdout(io.StringIO()) as saida:

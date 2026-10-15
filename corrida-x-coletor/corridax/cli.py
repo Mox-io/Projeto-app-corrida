@@ -159,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {marca}{c.data[8:]}/{c.data[5:7]}  {c.nome} — {c.local or 'local?'} ({c.regiao})")
 
     csv_path = salvar_csv(itens, saida / "calendario.csv")
-    json_path = salvar_json(itens, saida / "calendario.json", hoje.isoformat())
+    json_path = salvar_json(itens, saida / "calendario.json", hoje.isoformat(), cfg.city_name)
     print(f"\nPlanilha-piloto: {csv_path}\nCalendário (JSON): {json_path}")
     print("Confira cada prova no site oficial antes de publicar: datas mudam e provas são canceladas.")
     return codigo

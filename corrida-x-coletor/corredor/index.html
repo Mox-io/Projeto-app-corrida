@@ -198,7 +198,10 @@ const FIREBASE_CONFIG = {
 };
 */
 const CONTATO_PARCEIROS = "mailto:contato@exemplo.com?subject=Quero%20ser%20parceiro%20do%20Corrida%20X";
-const CIDADE = "São Paulo";
+const CIDADE = "São Paulo"; // cidade padrão (a do coletor) e, por enquanto, a única dividida em zonas
+// Sugestões do campo Cidade; a pessoa pode digitar outra. As cidades das provas publicadas entram também.
+const CIDADES_SUGERIDAS = ["São Paulo", "Campinas", "Santos", "São José dos Campos", "Sorocaba", "Ribeirão Preto",
+  "Jundiaí", "Rio de Janeiro", "Belo Horizonte", "Curitiba", "Porto Alegre", "Brasília"];
 const FIREBASE_VERSAO = "10.13.0";
 
 const REGIOES = ["zona sul", "zona norte", "zona leste", "zona oeste", "centro"];
@@ -231,6 +234,15 @@ function normalizar(t) {
   return String(t || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 const slug = (t) => normalizar(t).replace(/ /g, "-").slice(0, 60) || "item";
+const mesmaCidade = (a, b) => normalizar(a) === normalizar(b);
+const temZonas = (cidade) => mesmaCidade(cidade, CIDADE);
+const cidadeDa = (x) => x?.cidade || CIDADE; // provas e perfis de antes do campo cidade são de São Paulo
+// Mesma grafia para todos ("sao paulo", "SP" -> "São Paulo"), senão o filtro por cidade separa iguais.
+function cidadeCanonica(texto) {
+  const t = String(texto || "").trim().replace(/\s+/g, " ");
+  if (normalizar(t) === "sp") return CIDADE;
+  return CIDADES_SUGERIDAS.find((c) => mesmaCidade(c, t)) || t;
+}
 const hojeISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -348,11 +360,14 @@ function validarPerfil(p) {
   if (nome.length < 2 || nome.length > 60) throw new Error("O nome deve ter de 2 a 60 caracteres.");
   const handle = String(p.handle || "").trim().replace(/^@/, "").toLowerCase();
   if (!/^[a-z0-9_.]{3,20}$/.test(handle)) throw new Error("O @usuário deve ter de 3 a 20 letras, números, ponto ou _.");
-  if (!REGIOES.includes(p.regiao)) throw new Error("Escolha sua região.");
+  const cidade = cidadeCanonica(p.cidade);
+  if (cidade.length < 2 || cidade.length > 60) throw new Error("Informe a sua cidade.");
+  const zonas = temZonas(cidade);
+  if (zonas && !REGIOES.includes(p.regiao)) throw new Error("Escolha a zona onde você corre.");
   const instagram = String(p.instagram || "").trim().replace(/^@/, "");
   if (instagram && !/^[A-Za-z0-9._]{1,30}$/.test(instagram)) throw new Error("Instagram inválido.");
   const distancias = (p.distancias || []).filter((d) => DISTANCIAS.some((x) => x.chave === d));
-  return { nome, handle, regiao: p.regiao, instagram, distancias, nomeBusca: normalizar(nome), foto: p.foto || null };
+  return { nome, handle, cidade, regiao: zonas ? p.regiao : "", instagram, distancias, nomeBusca: normalizar(nome), foto: p.foto || null };
 }
 
 function validarTreino(t) {
@@ -383,6 +398,19 @@ const DEMO_PROVAS = [{"id":"2026-10-18-stfrs-center-norte-iii-santander-track-fi
 
 const DEMO_HOJE = "2026-10-15"; // a demonstração usa uma data fixa para a amostra não envelhecer
 
+// Provas inventadas em outras cidades, só para mostrar o filtro por cidade na demonstração.
+const DEMO_OUTRAS_CIDADES = [
+  ["2026-10-25", "07:00", "Corrida do Taquaral (exemplo)", "Lagoa do Taquaral", "Campinas", ["5 km", "10 km"], []],
+  ["2026-11-08", "06:30", "Corrida da Orla (exemplo)", "Orla do Gonzaga", "Santos", ["5 km", "10 km"], []],
+  ["2026-11-21", "19:30", "Night Run da Orla (exemplo)", "Orla do José Menino", "Santos", ["5 km"], ["noturna"]],
+  ["2026-11-29", "06:00", "Meia de Campinas (exemplo)", "Parque Portugal", "Campinas", ["10 km", "21 km"], []],
+].map(([data, horario, nome, local, cidade, distancias, tags]) => {
+  const id = `${data}-${slug(nome)}`;
+  return { id, nome, data, horario, local, cidade, regiao: null, regioes: [], distancias, organizador: "Organizador fictício",
+    plataforma: "Plataforma fictícia (demonstração)", preco: null, porte: null, link_inscricao: `https://inscricoes.example/evento/${slug(nome)}`,
+    fonte: { nome: "agenda.example", url: `https://agenda.example/corridas/${slug(nome)}`, coletado_em: DEMO_HOJE }, tags, conferido: true };
+});
+
 class StoreDemo {
   constructor() {
     this.demo = true;
@@ -410,7 +438,7 @@ class StoreDemo {
     };
     for (const p of Object.values(pessoas)) p.nomeBusca = normalizar(p.nome);
     const provas = {};
-    for (const p of DEMO_PROVAS) provas[p.id] = { ...p, destaque: false };
+    for (const p of [...DEMO_PROVAS, ...DEMO_OUTRAS_CIDADES]) provas[p.id] = { ...p, destaque: false };
     const ids = Object.keys(provas);
     const destaque = ids.find((id) => id.includes("sportv")) || ids[0];
     if (destaque) provas[destaque].destaque = true;
@@ -440,8 +468,9 @@ class StoreDemo {
     const parceiros = {
       "p1": { nome: "Nutri Esportiva (exemplo)", categoria: "nutricao", regiao: "zona sul", cidade: "São Paulo", descricao: "Plano alimentar para provas de 5 km à maratona.", site: "https://parceiro.example/nutri", instagram: "", whatsapp: "" },
       "p2": { nome: "Fisio do Corredor (exemplo)", categoria: "fisioterapia", regiao: "zona oeste", cidade: "São Paulo", descricao: "Prevenção de lesão e retorno aos treinos.", site: "https://parceiro.example/fisio", instagram: "", whatsapp: "" },
+      "p5": { nome: "Assessoria Orla Run (exemplo)", categoria: "assessoria", regiao: "", cidade: "Santos", descricao: "Treinos na orla, de segunda a sábado.", site: "https://parceiro.example/orla", instagram: "", whatsapp: "" },
       "p3": { nome: "Assessoria Pace Certo (exemplo)", categoria: "assessoria", regiao: "zona sul", cidade: "São Paulo", descricao: "Treinos em grupo no Ibirapuera, terça e quinta.", site: "https://parceiro.example/assessoria", instagram: "", whatsapp: "" },
-      "p4": { nome: "Treinador do Lago (exemplo)", categoria: "consultoria", regiao: "", cidade: "Bragança Paulista", descricao: "Planilha de treino e acompanhamento online.", site: "https://parceiro.example/treinador", instagram: "", whatsapp: "" },
+      "p4": { nome: "Treinador do Lago (exemplo)", categoria: "consultoria", regiao: "online", cidade: "Bragança Paulista", descricao: "Planilha de treino e acompanhamento online.", site: "https://parceiro.example/treinador", instagram: "", whatsapp: "" },
     };
     return { usuarios: pessoas, provas, confirmacoes, follows: { "demo-eu_demo-ana": { seguidor: "demo-eu", alvo: "demo-ana" }, "demo-eu_demo-bruno": { seguidor: "demo-eu", alvo: "demo-bruno" } }, treinos, grupos, parceiros, admin: true, logado: false };
   }
@@ -579,11 +608,13 @@ function validarParceiro(p) {
   const nome = String(p.nome || "").trim();
   if (nome.length < 2 || nome.length > 80) throw new Error("Nome do parceiro: de 2 a 80 caracteres.");
   if (!CATEGORIAS[p.categoria]) throw new Error("Escolha a categoria.");
-  if (p.regiao && !REGIOES.includes(p.regiao)) throw new Error("Região inválida.");
+  // regiao: uma zona (São Paulo), "" = a cidade toda, "online" = aparece para todas as cidades
+  if (p.regiao && p.regiao !== "online" && !REGIOES.includes(p.regiao)) throw new Error("Região inválida.");
+  if (REGIOES.includes(p.regiao) && !temZonas(p.cidade || CIDADE)) throw new Error(`Zonas só existem em ${CIDADE}. Escolha "Cidade toda" ou "Online".`);
   const site = String(p.site || "").trim();
   if (site && !/^https?:\/\/\S+$/i.test(site)) throw new Error("O site deve começar com http:// ou https://.");
   return {
-    nome, categoria: p.categoria, regiao: p.regiao || "", cidade: String(p.cidade || "").trim().slice(0, 60) || CIDADE,
+    nome, categoria: p.categoria, regiao: p.regiao || "", cidade: cidadeCanonica(p.cidade).slice(0, 60) || CIDADE,
     descricao: String(p.descricao || "").trim().slice(0, 240), site, instagram: String(p.instagram || "").trim().replace(/^@/, "").slice(0, 30),
     whatsapp: String(p.whatsapp || "").replace(/\D/g, "").slice(0, 13),
   };
@@ -602,6 +633,7 @@ function validarCalendario(json, soConferidas) {
     ok.push({
       id: (typeof p.id === "string" && /^[a-z0-9-]{3,90}$/.test(p.id) ? p.id : `${p.data}-${slug(p.nome)}`),
       nome: p.nome.slice(0, 200), data: p.data, horario: texto(p.horario, 5), local: texto(p.local, 200),
+      cidade: cidadeCanonica(texto(p.cidade, 60) || texto(json.cidade, 60) || CIDADE),
       regiao: texto(p.regiao, 40), regioes: (p.regioes || []).filter((r) => REGIOES.includes(r)),
       distancias: (p.distancias || []).filter((d) => typeof d === "string").slice(0, 8).map((d) => d.slice(0, 30)),
       organizador: texto(p.organizador, 120), plataforma: texto(p.plataforma, 80), preco: texto(p.preco, 120), porte: texto(p.porte, 120),
@@ -805,7 +837,7 @@ class StoreFirebase {
 const estado = {
   store: null, demo: false, usuario: null, perfil: null, admin: false,
   aba: "provas", provas: [], confirmacoes: [], seguindo: [], pessoas: {},
-  filtros: { regioes: null, distancias: new Set(), tematica: false, noturna: false, amigos: false },
+  filtros: { cidade: CIDADE, regioes: null, distancias: new Set(), tematica: false, noturna: false, amigos: false },
 };
 
 function preferencias() {
@@ -814,8 +846,17 @@ function preferencias() {
 function salvarPreferencias() {
   try {
     const f = estado.filtros;
-    localStorage.setItem("corridax-filtros", JSON.stringify({ regioes: f.regioes ? [...f.regioes] : null, distancias: [...f.distancias], tematica: f.tematica, noturna: f.noturna }));
+    localStorage.setItem("corridax-filtros", JSON.stringify({ cidade: f.cidade, regioes: f.regioes ? [...f.regioes] : null, distancias: [...f.distancias], tematica: f.tematica, noturna: f.noturna }));
   } catch { /* ignora */ }
+}
+
+// Filtro de cidade e zona a partir do perfil (no primeiro acesso, ao trocar de cidade no perfil
+// e ao escolher outra cidade na lista). Em São Paulo começa pela zona da pessoa.
+function filtrarPelaCidade(cidade) {
+  const f = estado.filtros;
+  f.cidade = cidade;
+  const minhaZona = temZonas(cidade) && mesmaCidade(cidadeDa(estado.perfil), cidade) ? estado.perfil?.regiao : "";
+  f.regioes = new Set(minhaZona ? [minhaZona] : []);
 }
 
 function tela(...filhos) {
@@ -870,10 +911,18 @@ function telaLogin(mensagem = "") {
 
 // ---------- Perfil (também é o cadastro do primeiro acesso) ----------
 function telaPerfil(primeiraVez = false) {
-  const p = estado.perfil || { nome: estado.usuario?.nome || "", handle: "", regiao: "", distancias: [], instagram: "" };
+  const p = estado.perfil || { nome: estado.usuario?.nome || "", handle: "", cidade: "", regiao: "", distancias: [], instagram: "" };
   const escolhidas = new Set(p.distancias || []);
+  const cidadesConhecidas = [...new Set([...CIDADES_SUGERIDAS, ...estado.provas.map(cidadeDa)])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const cidade = el("input", { id: "pf-cidade", type: "text", maxlength: "60", list: "pf-cidades", autocomplete: "address-level2",
+    value: estado.perfil ? cidadeDa(p) : "", placeholder: "ex.: São Paulo" });
+  const listaCidades = el("datalist", { id: "pf-cidades" }, cidadesConhecidas.map((c) => el("option", { value: c })));
   const regiao = el("select", { id: "pf-regiao" }, el("option", { value: "" }, "Escolha..."),
     REGIOES.map((r) => el("option", { value: r, selected: p.regiao === r }, NOME_REGIAO[r])));
+  const campoZona = el("div", { class: "campo" }, el("label", { for: "pf-regiao" }, `Zona onde você corre (${CIDADE})`), regiao);
+  const mostrarZona = () => { campoZona.hidden = !temZonas(cidadeCanonica(cidade.value)); };
+  cidade.addEventListener("input", mostrarZona);
+  mostrarZona();
   const dist = el("div", { class: "chips" });
   const renderDist = () => dist.replaceChildren(...DISTANCIAS.map((d) => el("button", {
     type: "button", "aria-pressed": String(escolhidas.has(d.chave)),
@@ -886,7 +935,8 @@ function telaPerfil(primeiraVez = false) {
     el("div", { class: "campo" }, el("label", { for: "pf-nome" }, "Nome"), el("input", { id: "pf-nome", type: "text", maxlength: "60", value: p.nome || "", autocomplete: "name" })),
     el("div", { class: "grade grade--2" },
       el("div", { class: "campo" }, el("label", { for: "pf-handle" }, "@usuário"), el("input", { id: "pf-handle", type: "text", maxlength: "21", value: p.handle || "", autocapitalize: "none", placeholder: "ex.: ana.corre" })),
-      el("div", { class: "campo" }, el("label", { for: "pf-regiao" }, "Onde você corre"), regiao)),
+      el("div", { class: "campo" }, el("label", { for: "pf-cidade" }, "Sua cidade"), cidade, listaCidades)),
+    campoZona,
     el("div", { class: "campo" }, el("span", { class: "rotulo" }, "Distâncias que você gosta"), dist),
     el("div", { class: "campo" }, el("label", { for: "pf-insta" }, "Instagram (opcional)"), el("input", { id: "pf-insta", type: "text", maxlength: "31", value: p.instagram || "", autocapitalize: "none", placeholder: "@seuperfil" })),
     erro, salvar);
@@ -895,7 +945,7 @@ function telaPerfil(primeiraVez = false) {
     erro.hidden = true;
     executar(salvar, async () => {
       try {
-        const dados = { nome: $("#pf-nome").value, handle: $("#pf-handle").value, regiao: regiao.value, distancias: [...escolhidas], instagram: $("#pf-insta").value, foto: estado.usuario?.foto || p.foto || null };
+        const dados = { nome: $("#pf-nome").value, handle: $("#pf-handle").value, cidade: cidade.value, regiao: regiao.value, distancias: [...escolhidas], instagram: $("#pf-insta").value, foto: estado.usuario?.foto || p.foto || null };
         validarPerfil(dados);
         await estado.store.salvarPerfil(dados);
       } catch (er) {
@@ -903,8 +953,12 @@ function telaPerfil(primeiraVez = false) {
         erro.hidden = false;
         return;
       }
+      const antes = estado.perfil;
       estado.perfil = await estado.store.perfil(estado.store.uid);
-      if (primeiraVez || !estado.filtros.regioes) estado.filtros.regioes = new Set([estado.perfil.regiao]);
+      if (primeiraVez || !mesmaCidade(cidadeDa(antes), cidadeDa(estado.perfil)) || antes?.regiao !== estado.perfil.regiao) {
+        filtrarPelaCidade(cidadeDa(estado.perfil));
+        salvarPreferencias();
+      }
       toast("Perfil salvo.");
       atualizarTopo();
       irPara("provas");
@@ -923,7 +977,7 @@ function telaPerfil(primeiraVez = false) {
     primeiraVez ? null : el("button", { type: "button", class: "voltar", onclick: () => irPara("provas") }, "← Voltar"),
     el("section", { class: "painel" },
       el("h2", {}, primeiraVez ? "Bem-vindo! Monte seu perfil" : "Meu perfil"),
-      primeiraVez ? el("p", { class: "dica" }, "Usamos a sua região para mostrar primeiro as provas perto de você.") : null,
+      primeiraVez ? el("p", { class: "dica" }, `Usamos a sua cidade (e, em ${CIDADE}, a zona) para mostrar primeiro as provas perto de você.`) : null,
       form),
     acoes);
 }
@@ -953,7 +1007,8 @@ async function irPara(aba) {
 }
 
 function atualizarTopo() {
-  $("#topo-sub").textContent = estado.perfil ? `· ${NOME_REGIAO[estado.perfil.regiao] || CIDADE}${estado.demo ? " · demonstração" : ""}` : "";
+  const zona = estado.perfil && temZonas(cidadeDa(estado.perfil)) ? NOME_REGIAO[estado.perfil.regiao] : "";
+  $("#topo-sub").textContent = estado.perfil ? `· ${cidadeDa(estado.perfil)}${zona ? `, ${zona.toLowerCase()}` : ""}${estado.demo ? " · demonstração" : ""}` : "";
   $("#btn-perfil").replaceChildren(...avatar({ ...estado.perfil, foto: estado.usuario?.foto || estado.perfil?.foto }).childNodes);
   if (!$("#btn-perfil").childNodes.length) $("#btn-perfil").textContent = iniciais(estado.perfil?.nome);
 }
@@ -968,7 +1023,8 @@ async function carregarProvas() {
 
 function passaFiltros(p) {
   const f = estado.filtros;
-  if (f.regioes && f.regioes.size) {
+  if (!mesmaCidade(cidadeDa(p), f.cidade)) return false;
+  if (temZonas(f.cidade) && f.regioes && f.regioes.size) {
     const regioesDaProva = p.regioes?.length ? p.regioes : [];
     if (!regioesDaProva.some((r) => f.regioes.has(r))) return false;
   }
@@ -1056,7 +1112,10 @@ function renderListaProvas() {
       el("ul", { class: "lista" }, provas.sort((a, b) => (a.horario || "99").localeCompare(b.horario || "99")).map(cartaoProva)));
   }
   if (!visiveis.length) {
-    partes.push(el("p", { class: "vazio" }, estado.provas.length ? "Nenhuma prova com esses filtros. Tente outra região ou tire um filtro." : "Ainda não há provas publicadas."));
+    const naCidade = estado.provas.some((p) => mesmaCidade(cidadeDa(p), estado.filtros.cidade));
+    partes.push(el("p", { class: "vazio" }, !estado.provas.length ? "Ainda não há provas publicadas."
+      : !naCidade ? `Ainda não há provas publicadas em ${estado.filtros.cidade}. O calendário começa por ${CIDADE} e as outras cidades vão entrando aos poucos.`
+      : "Nenhuma prova com esses filtros. Tente outra zona ou tire um filtro."));
   }
   caixa.replaceChildren(...partes);
 }
@@ -1065,9 +1124,18 @@ async function telaProvas() {
   await carregarProvas();
   const f = estado.filtros;
   const caixaFiltros = el("div", { class: "filtros" });
+  // Cidades com provas publicadas (com a contagem), mais a do perfil e a escolhida agora.
+  const porCidade = new Map();
+  for (const p of estado.provas) { const c = cidadeDa(p); porCidade.set(c, (porCidade.get(c) || 0) + 1); }
+  for (const c of [cidadeDa(estado.perfil), f.cidade]) if (![...porCidade.keys()].some((x) => mesmaCidade(x, c))) porCidade.set(c, 0);
+  const cidades = [...porCidade].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
+  const seletorCidade = el("select", { "aria-label": "Cidade das provas", class: "seletor-cidade" },
+    cidades.map(([c, n]) => el("option", { value: c, selected: mesmaCidade(c, f.cidade) }, `${c} (${n} ${n === 1 ? "prova" : "provas"})`)));
+  seletorCidade.addEventListener("change", () => { filtrarPelaCidade(seletorCidade.value); aplicar(); });
   const renderFiltros = () => {
-    caixaFiltros.replaceChildren(
-      chipsAlternar([["todas", "Todas"], ...REGIOES.map((r) => [r, NOME_REGIAO[r]])],
+    caixaFiltros.replaceChildren(...[
+      el("label", { class: "linha" }, el("span", { class: "rotulo", style: "margin:0" }, "Cidade"), seletorCidade),
+      temZonas(f.cidade) && chipsAlternar([["todas", "Todas"], ...REGIOES.map((r) => [r, NOME_REGIAO[r]])],
         (v) => (v === "todas" ? !f.regioes || !f.regioes.size : f.regioes?.has(v)),
         (v) => {
           if (v === "todas") f.regioes = new Set();
@@ -1085,12 +1153,12 @@ async function telaProvas() {
           else if (v === "amigos") f.amigos = !f.amigos;
           else f.distancias.has(v) ? f.distancias.delete(v) : f.distancias.add(v);
           aplicar();
-        }, true));
+        }, true)].filter(Boolean));
   };
   const aplicar = () => { salvarPreferencias(); renderFiltros(); renderListaProvas(); };
   renderFiltros();
   tela(
-    estado.demo ? el("p", { class: "aviso" }, "Demonstração: provas da amostra do projeto piloto (links fictícios). A data de hoje está fixa em 15/10/2026.") : null,
+    estado.demo ? el("p", { class: "aviso" }, "Demonstração: provas da amostra do projeto piloto (links fictícios), e algumas de exemplo em Campinas e Santos. A data de hoje está fixa em 15/10/2026.") : null,
     caixaFiltros,
     el("div", { id: "lista-provas" }));
   renderListaProvas();
@@ -1314,17 +1382,23 @@ function confirmarAcao(botao, texto) {
 async function telaParceiros() {
   const todos = await estado.store.parceiros();
   let categoria = "todas";
-  let soRegiao = Boolean(estado.perfil?.regiao);
+  let soRegiao = Boolean(estado.perfil);
+  const minhaCidade = cidadeDa(estado.perfil);
+  const minhaZona = temZonas(minhaCidade) ? estado.perfil?.regiao : "";
+  // Perto de mim = atende online, ou é da minha cidade (a cidade toda, ou a minha zona em São Paulo).
+  const perto = (p) => p.regiao === "online"
+    || (mesmaCidade(cidadeDa(p), minhaCidade) && (!p.regiao || !minhaZona || p.regiao === minhaZona));
+  const ondeAtende = (p) => (p.regiao === "online" ? "Atende online" : [NOME_REGIAO[p.regiao], cidadeDa(p)].filter(Boolean).join(" · "));
   const caixa = el("div", {});
   const render = () => {
-    const lista = todos.filter((p) => (categoria === "todas" || p.categoria === categoria) && (!soRegiao || !p.regiao || p.regiao === estado.perfil.regiao));
+    const lista = todos.filter((p) => (categoria === "todas" || p.categoria === categoria) && (!soRegiao || perto(p)));
     caixa.replaceChildren(
       chipsAlternar([["todas", "Todos"], ...Object.entries(CATEGORIAS)], (v) => v === categoria, (v) => { categoria = v; render(); }, true),
       el("label", { class: "opcao" }, Object.assign(el("input", { type: "checkbox", onchange: (e) => { soRegiao = e.target.checked; render(); } }), { checked: soRegiao }),
-        `Só da minha região (${NOME_REGIAO[estado.perfil?.regiao] || "—"}) e atendimento online`),
+        `Só de ${minhaZona ? `${minhaCidade}, ${NOME_REGIAO[minhaZona].toLowerCase()}` : minhaCidade} e atendimento online`),
       lista.length ? el("ul", { class: "lista" }, lista.map((p) => el("li", { class: "cartao" },
         el("div", { class: "cartao-cab" }, el("div", {}, el("div", { class: "cartao-nome" }, p.nome),
-          el("div", { class: "meta" }, [CATEGORIAS[p.categoria], NOME_REGIAO[p.regiao], p.cidade].filter(Boolean).join(" · ")))),
+          el("div", { class: "meta" }, `${CATEGORIAS[p.categoria]} · ${ondeAtende(p)}`))),
         p.descricao ? el("p", { class: "meta", style: "color:var(--text)" }, p.descricao) : null,
         el("div", { class: "links" }, linkInsta(p.instagram), linkWhats(p.whatsapp, "WhatsApp"), linkSeguro(p.site, "Site")))))
         : el("p", { class: "vazio" }, "Nenhum parceiro com esses filtros ainda."));
@@ -1401,7 +1475,8 @@ async function telaAdmin() {
   const pf = {
     nome: el("input", { type: "text", maxlength: "80", id: "pa-nome" }),
     categoria: el("select", { id: "pa-cat" }, Object.entries(CATEGORIAS).map(([v, n]) => el("option", { value: v }, n))),
-    regiao: el("select", { id: "pa-reg" }, el("option", { value: "" }, "Online / qualquer região"), REGIOES.map((r) => el("option", { value: r }, NOME_REGIAO[r]))),
+    regiao: el("select", { id: "pa-reg" }, el("option", { value: "" }, "Cidade toda"), el("option", { value: "online" }, "Online (todas as cidades)"),
+      REGIOES.map((r) => el("option", { value: r }, `${NOME_REGIAO[r]} (${CIDADE})`))),
     cidade: el("input", { type: "text", maxlength: "60", id: "pa-cid", value: CIDADE }),
     instagram: el("input", { type: "text", maxlength: "31", id: "pa-ig", placeholder: "@perfil" }),
     whatsapp: el("input", { type: "text", maxlength: "20", id: "pa-wa", inputmode: "tel", placeholder: "(11) 90000-0000" }),
@@ -1440,7 +1515,7 @@ async function telaAdmin() {
           if (!confirmarAcao(rem, "Confirmar")) return;
           executar(rem, async () => { await estado.store.removerParceiro(p.id); telaAdmin(); });
         });
-        return el("div", { class: "pessoa" }, el("div", { class: "info" }, el("b", {}, p.nome), el("span", {}, [CATEGORIAS[p.categoria], NOME_REGIAO[p.regiao] || "online", p.cidade].join(" · "))), rem);
+        return el("div", { class: "pessoa" }, el("div", { class: "info" }, el("b", {}, p.nome), el("span", {}, [CATEGORIAS[p.categoria], p.regiao === "online" ? "online" : NOME_REGIAO[p.regiao], cidadeDa(p)].filter(Boolean).join(" · "))), rem);
       })));
 }
 
@@ -1464,7 +1539,8 @@ async function aoMudarUsuario(u) {
   }
   if (!estado.perfil) return telaPerfil(true);
   const pref = preferencias();
-  estado.filtros.regioes = new Set(pref?.regioes ?? [estado.perfil.regiao]);
+  filtrarPelaCidade(pref?.cidade || cidadeDa(estado.perfil));
+  if (pref?.regioes) estado.filtros.regioes = new Set(pref.regioes);
   estado.filtros.distancias = new Set(pref?.distancias || []);
   estado.filtros.tematica = Boolean(pref?.tematica);
   estado.filtros.noturna = Boolean(pref?.noturna);

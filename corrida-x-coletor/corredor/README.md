@@ -8,11 +8,11 @@ Um arquivo só (`index.html`, HTML + CSS + JS), no mesmo estilo do B31: **Fireba
 
 | Aba | O que faz |
 |---|---|
-| **Provas** | Calendário por dia, com a próxima prova primeiro. Filtros por região, distância, **temáticas** (Barbie, Disney, super-heróis...), **noturnas** e "onde meus amigos vão". Botão **Vou correr**, quem confirmou, link da inscrição e fonte. As provas em **destaque** (plano gold) aparecem no topo. Contagem regressiva da sua próxima prova. |
+| **Provas** | Calendário por dia, com a próxima prova primeiro. Escolha da **cidade** (começa pela do perfil) e, em São Paulo, da **zona**. Filtros por distância, **temáticas** (Barbie, Disney, super-heróis...), **noturnas** e "onde meus amigos vão". Botão **Vou correr**, quem confirmou, link da inscrição e fonte. As provas em **destaque** (plano gold) aparecem no topo. Contagem regressiva da sua próxima prova. |
 | **Amigos** | Buscar corredores por nome ou @usuário, seguir, e ver a atividade de quem você segue: quem vai em qual prova e os treinos lançados. |
 | **Treinos** | Lançar um treino à mão (data, km, tempo) ou **importar um arquivo GPX** (relógio, Strava). Mostra km no mês, no ano, número de treinos e de provas confirmadas. O GPX é lido no próprio aparelho; só a distância, o tempo e a data são salvos. |
 | **Grupos** | Criar um grupo, convidar pelo código de 6 letras (botão Convidar usa o compartilhar do celular) e ver o **ranking de km** do mês ou do ano. |
-| **Parceiros** | Nutricionistas, fisioterapeutas, assessorias e treinadores, filtrados pela região do corredor (os que atendem online aparecem para todos). |
+| **Parceiros** | Nutricionistas, fisioterapeutas, assessorias e treinadores, filtrados pela cidade (e zona, em São Paulo) do corredor. Os que atendem online aparecem para todos. |
 | **Administração** (no perfil, só para admins) | Publicar o `calendario.json` do coletor (com a opção de só as aprovadas), marcar **destaque**, remover prova, cadastrar parceiros e **baixar as confirmações por prova** (o número para mostrar aos organizadores). |
 
 Ficou de fora, como combinado: inscrição e pagamento dentro do app, integração direta com o Strava (o GPX resolve por enquanto), notificações e mensagens entre usuários.
