@@ -28,7 +28,7 @@ FIM = date(2026, 12, 10)
 
 def cfg(**ajustes) -> Config:
     base = Config(
-        api_key="", base_url="https://api.aisa.one", model="gpt-4.1", city_name="São Paulo",
+        api_key="", base_url="https://api.aisa.one", model="gpt-4.1-mini", city_name="São Paulo",
         search_location="Sao Paulo,State of Sao Paulo,Brazil", search_language="pt", search_depth=20,
         regions=("zona sul",), window_weeks=8, output_dir=Path(tempfile.gettempdir()) / "cx-testes",
     )

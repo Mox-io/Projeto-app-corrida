@@ -70,7 +70,7 @@ class Config:
         return cls(
             api_key=api_key,
             base_url=_texto("AISA_BASE_URL", "https://api.aisa.one").rstrip("/"),
-            model=_texto("AISA_MODEL", "gpt-4.1"),
+            model=_texto("AISA_MODEL", "gpt-4.1-mini"),
             city_name=_texto("CITY_NAME", "São Paulo"),
             search_location=_texto("SEARCH_LOCATION", "Sao Paulo,State of Sao Paulo,Brazil"),
             search_language=_texto("SEARCH_LANGUAGE", "pt"),
