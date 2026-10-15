@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f6e56" />
+  <title>Corrida X — coletor de corridas</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="/static/manifest.webmanifest" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <header class="topo">
+    <h1>Corrida X <span class="sub" id="cidade"></span></h1>
+    <div class="usuario">
+      <span id="usuario-email"></span>
+      <button type="button" id="btn-sair" class="btn btn--sec btn--sm" hidden>Sair</button>
+    </div>
+  </header>
+
+  <main class="conteudo">
+    <p class="carregando" id="carregando">Carregando...</p>
+
+    <!-- ============ LOGIN ============ -->
+    <section class="painel painel--login" id="tela-login" hidden>
+      <h2>Entrar</h2>
+      <p class="dica">Use o e-mail e a senha cadastrados no Firebase do app de pesquisa.</p>
+      <p class="erro" id="login-erro" role="alert" hidden></p>
+      <form id="form-login" novalidate>
+        <div class="campo">
+          <label for="login-email">E-mail</label>
+          <input id="login-email" type="email" autocomplete="username" required />
+        </div>
+        <div class="campo">
+          <label for="login-senha">Senha</label>
+          <input id="login-senha" type="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn" id="btn-entrar">Entrar</button>
+      </form>
+    </section>
+
+    <!-- ============ APP ============ -->
+    <div id="tela-app" hidden>
+      <p class="aviso" id="aviso-config" hidden></p>
+
+      <section class="painel">
+        <h2>1. Buscar provas</h2>
+        <form id="form-busca" novalidate>
+          <div class="campo">
+            <span class="rotulo" id="rotulo-regioes">Regiões de São Paulo</span>
+            <div class="chips chips--alternar" id="regioes" role="group" aria-labelledby="rotulo-regioes"></div>
+          </div>
+
+          <div class="grade">
+            <div class="campo">
+              <label for="f-semanas">Semanas à frente</label>
+              <input id="f-semanas" type="text" inputmode="numeric" value="8" />
+            </div>
+            <div class="campo">
+              <label for="f-profundidade">Resultados por consulta</label>
+              <input id="f-profundidade" type="text" inputmode="numeric" value="20" />
+            </div>
+            <div class="campo">
+              <label for="f-limite">Máx. de consultas</label>
+              <input id="f-limite" type="text" inputmode="numeric" value="6" />
+            </div>
+          </div>
+
+          <details class="avancado">
+            <summary>Termos de busca extras</summary>
+            <div class="campo">
+              <label for="f-extras">Um por linha (ex.: corrida noturna São Paulo novembro)</label>
+              <textarea id="f-extras" rows="3" maxlength="1100"></textarea>
+            </div>
+          </details>
+
+          <label class="opcao"><input type="checkbox" id="f-llm" checked /> Ler os resultados com IA (consome créditos do LLM; desmarcado usa regras e tudo vai para "conferir")</label>
+          <label class="opcao"><input type="checkbox" id="f-demo" /> Modo demonstração (amostra do projeto piloto, sem custo)</label>
+
+          <details class="avancado" id="bloco-consultas">
+            <summary>Ver as consultas que serão feitas</summary>
+            <ol class="consultas" id="lista-consultas"></ol>
+          </details>
+
+          <p class="dica" id="plano" aria-live="polite"></p>
+          <p class="erro" id="busca-erro" role="alert" hidden></p>
+          <button type="submit" class="btn" id="btn-buscar">Buscar provas</button>
+        </form>
+      </section>
+
+      <section class="painel" id="painel-progresso" hidden>
+        <h2 id="titulo-progresso">Andamento <span class="spinner" id="spinner-tarefa" hidden aria-hidden="true"></span></h2>
+        <ul class="progresso" id="lista-progresso" aria-live="polite"></ul>
+        <p class="erro" id="erro-tarefa" role="alert" hidden></p>
+        <button type="button" class="btn btn--sec btn--sm" id="btn-cancelar" hidden>Cancelar</button>
+      </section>
+
+      <section class="painel" id="painel-resultados" hidden>
+        <h2>2. Calendário</h2>
+        <p class="dica" id="info-janela"></p>
+        <div class="resumo" id="resumo"></div>
+        <div class="barra">
+          <label class="opcao"><input type="checkbox" id="mostrar-conferir" checked /> Mostrar "a conferir"</label>
+          <label class="opcao"><input type="checkbox" id="mostrar-descartadas" /> Mostrar descartadas</label>
+        </div>
+        <div id="calendario"></div>
+        <p class="dica">Mudou as regiões ou as semanas? O calendário é refeito na hora, sem nova busca e sem custo.</p>
+        <p class="erro" id="baixar-erro" role="alert" hidden></p>
+        <div class="acoes">
+          <button type="button" class="btn btn--sec" id="btn-csv">Baixar planilha (CSV)</button>
+          <button type="button" class="btn btn--sec" id="btn-json">Baixar calendário (JSON)</button>
+          <button type="button" class="btn btn--sec" id="btn-limpar">Limpar resultados</button>
+        </div>
+        <p class="dica">Confira cada prova no site oficial antes de publicar: datas mudam e provas são canceladas.</p>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

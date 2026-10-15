@@ -1,0 +1,24 @@
+# Imagem do app web do Corrida X (coletor). Serve para qualquer hospedagem que rode Docker.
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HOST=0.0.0.0 \
+    PORT=8000
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY corridax ./corridax
+COPY webapp ./webapp
+
+# Não roda como administrador dentro do contêiner.
+RUN useradd --create-home app && chown -R app /app
+USER app
+
+EXPOSE 8000
+
+# O app não guarda estado no servidor, então também funciona com vários processos.
+CMD ["python", "-m", "webapp"]

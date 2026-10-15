@@ -1,0 +1,10 @@
+{
+  "name": "Corrida X — coletor",
+  "short_name": "Corrida X",
+  "description": "Pesquisa corridas de rua por região e monta o calendário do piloto",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f6f3",
+  "theme_color": "#0f6e56",
+  "icons": [{ "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
