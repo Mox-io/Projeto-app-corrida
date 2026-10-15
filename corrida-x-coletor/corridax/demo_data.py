@@ -45,6 +45,7 @@ PROVAS_DEMO: list[tuple[str, str, str, str, list[str], str | None, bool, str | N
     ("2026-12-12", "São Silvestrinha", "Centro Olímpico", "Vega Sports", ["infantil"], None, True, "São Paulo"),
     ("2026-12-20", "Circuito das Estações, edição Verão", "Praça Charles Miller", "TTK", ["5 km", "10 km"], None, True, "São Paulo"),
     ("2026-12-31", "101ª Corrida Internacional de São Silvestre", "Avenida Paulista e Centro", "FCL Vega Sports", ["15 km"], "08:00", True, "São Paulo"),
+    ("2026-11-29", "Corrida dos Super-Heróis (exemplo)", "Parque Villa-Lobos", "Organizador fictício", ["3 km", "5 km"], "07:00", True, "São Paulo"),
     # --- casos inventados para mostrar a triagem ---
     ("2026-08-02", "Circuito Sesc de Corridas, etapa Interlagos", "Sesc Interlagos", "Sesc", ["5 km"], None, True, "São Paulo"),
     ("2026-11-08", "Pedal Noturno da Zona Sul", "Parque Ibirapuera", "Grupo fictício", ["30 km"], "20:00", True, "São Paulo"),

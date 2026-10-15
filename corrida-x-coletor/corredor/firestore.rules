@@ -1,0 +1,119 @@
+rules_version = '2';
+
+// Regras do app do corredor (Corrida X). A página pode ser alterada por qualquer pessoa,
+// então TODA permissão de verdade mora aqui. Publique com:  firebase deploy --only firestore
+//
+// Administradores: crie à mão, no console do Firestore, o documento  config/admins  com o campo
+//   emails (array) = ["seu-email@gmail.com", "email-do-diego@gmail.com"]
+// Ninguém consegue alterar esse documento pelo app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() { return request.auth != null; }
+    function eu() { return request.auth.uid; }
+    function admin() {
+      return logado()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/config/admins)
+        && request.auth.token.email in get(/databases/$(database)/documents/config/admins).data.emails;
+    }
+    function texto(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function textoOpcional(v, max) { return v == null || (v is string && v.size() <= max); }
+    function regiao(v) { return v in ['zona sul', 'zona norte', 'zona leste', 'zona oeste', 'centro']; }
+    function dataISO(v) { return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+    function soCampos(campos) { return request.resource.data.keys().hasOnly(campos); }
+
+    match /config/{doc} {
+      allow read: if logado();
+      allow write: if false;
+    }
+
+    // Provas e parceiros: qualquer um lê; só admin escreve (importação do coletor, destaque).
+    match /provas/{id} {
+      allow read: if true;
+      allow write: if admin();
+    }
+    match /parceiros/{id} {
+      allow read: if true;
+      allow write: if admin();
+    }
+
+    // Perfil: cada um escreve só o seu. Logados podem ler (é o que faz a parte social funcionar).
+    match /usuarios/{uid} {
+      allow read: if logado();
+      allow create, update: if logado() && uid == eu()
+        && soCampos(['nome', 'handle', 'regiao', 'instagram', 'distancias', 'nomeBusca', 'foto', 'atualizadoEm'])
+        && texto(request.resource.data.nome, 2, 60)
+        && request.resource.data.handle is string && request.resource.data.handle.matches('^[a-z0-9_.]{3,20}$')
+        && regiao(request.resource.data.regiao)
+        && textoOpcional(request.resource.data.instagram, 30)
+        && request.resource.data.distancias is list && request.resource.data.distancias.size() <= 4
+        && texto(request.resource.data.nomeBusca, 1, 80)
+        && textoOpcional(request.resource.data.foto, 500);
+      allow delete: if logado() && uid == eu();
+    }
+
+    // "Vou correr": o id é <provaId>_<uid>, então cada pessoa confirma uma vez por prova.
+    match /confirmacoes/{id} {
+      allow read: if logado();
+      allow create: if logado()
+        && request.resource.data.uid == eu()
+        && id == request.resource.data.provaId + '_' + eu()
+        && exists(/databases/$(database)/documents/provas/$(request.resource.data.provaId))
+        && soCampos(['provaId', 'uid', 'nome', 'data', 'em'])
+        && texto(request.resource.data.nome, 1, 60)
+        && dataISO(request.resource.data.data);
+      allow delete: if logado() && resource.data.uid == eu();
+    }
+
+    // Seguir: o id é <seguidor>_<alvo>.
+    match /follows/{id} {
+      allow read: if logado();
+      allow create: if logado()
+        && request.resource.data.seguidor == eu()
+        && request.resource.data.alvo != eu()
+        && id == eu() + '_' + request.resource.data.alvo
+        && soCampos(['seguidor', 'alvo', 'em']);
+      allow delete: if logado() && resource.data.seguidor == eu();
+    }
+
+    // Treinos: só o dono cria/apaga. Distância de 0 a 300 km.
+    match /treinos/{id} {
+      allow read: if logado();
+      allow create: if logado()
+        && request.resource.data.uid == eu()
+        && soCampos(['uid', 'nome', 'data', 'km', 'minutos', 'descricao', 'origem', 'em'])
+        && request.resource.data.km is number && request.resource.data.km > 0 && request.resource.data.km <= 300
+        && dataISO(request.resource.data.data)
+        && (request.resource.data.minutos == null || (request.resource.data.minutos is int && request.resource.data.minutos > 0 && request.resource.data.minutos <= 2000))
+        && textoOpcional(request.resource.data.descricao, 120)
+        && request.resource.data.origem in ['manual', 'gpx'];
+      allow delete: if logado() && resource.data.uid == eu();
+    }
+
+    // Grupos: o dono cria (só ele de membro) e apaga. Qualquer logado com o código pode
+    // ENTRAR (acrescentar só a si mesmo) e qualquer membro pode SAIR (tirar só a si mesmo).
+    match /grupos/{id} {
+      allow read: if logado();
+      allow create: if logado()
+        && request.resource.data.dono == eu()
+        && request.resource.data.membros == [eu()]
+        && soCampos(['nome', 'codigo', 'dono', 'membros', 'criadoEm'])
+        && texto(request.resource.data.nome, 3, 40)
+        && request.resource.data.codigo is string && request.resource.data.codigo.matches('^[A-Z0-9]{6}$');
+      allow update: if logado()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['membros'])
+        && request.resource.data.membros.size() <= 30
+        && (
+          // entrar
+          (!(eu() in resource.data.membros)
+            && request.resource.data.membros.toSet() == resource.data.membros.toSet().union([eu()].toSet()))
+          ||
+          // sair (o dono não sai: ele apaga o grupo)
+          (eu() in resource.data.membros && resource.data.dono != eu()
+            && request.resource.data.membros.toSet() == resource.data.membros.toSet().difference([eu()].toSet()))
+        );
+      allow delete: if logado() && resource.data.dono == eu();
+    }
+  }
+}

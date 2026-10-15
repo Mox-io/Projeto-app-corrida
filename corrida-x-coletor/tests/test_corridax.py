@@ -225,6 +225,23 @@ class TestTriagem(unittest.TestCase):
         self.assertEqual(chave(corrida(nome="Corrida Dorina 2026")), chave(corrida(nome="Corrida Dorina")))
 
 
+class TestEtiquetas(unittest.TestCase):
+    def test_tematica_e_noturna(self):
+        from corridax.tags import etiquetas
+
+        self.assertEqual(etiquetas(corrida(nome="Corrida da Barbie")), ["tematica"])
+        self.assertEqual(etiquetas(corrida(nome="Corrida Tom & Jerry")), ["tematica"])
+        self.assertEqual(etiquetas(corrida(nome="Night Run, etapa 2")), ["noturna"])
+        self.assertEqual(etiquetas(corrida(nome="Corrida X", horario="19:30")), ["noturna"])
+        self.assertEqual(etiquetas(corrida(nome="Meia de Sampa", horario="06:00")), [])
+
+    def test_id_estavel(self):
+        from corridax.relatorio import id_da_prova
+
+        self.assertEqual(id_da_prova(corrida(nome="6ª SporTV Run, Super 10K", data="2026-10-18")),
+                         "2026-10-18-6a-sportv-run-super-10k")
+
+
 class TestDemoERelatorio(unittest.TestCase):
     def test_demo_completo(self):
         itens = coletar(ClienteDemo(), cfg(), ["demo"], ("zona sul",), HOJE_DEMO, 20)
@@ -248,6 +265,9 @@ class TestDemoERelatorio(unittest.TestCase):
         self.assertIn("18/10/2026", texto)
         cal = calendario_json(itens, "2026-10-15")
         self.assertTrue(all(p["fonte"]["url"] for p in cal["provas"]))
+        self.assertEqual(len({p["id"] for p in cal["provas"]}), len(cal["provas"]))
+        disney = next(p for p in cal["provas"] if p["nome"] == "Disney Magic Run")
+        self.assertEqual((disney["tags"], disney["regioes"]), (["tematica"], ["zona sul"]))
         self.assertEqual(len(cal["provas"]), sum(i.situacao != "descartada" for i in itens))
 
     def test_cli_demo_grava_arquivos(self):

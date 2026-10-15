@@ -12,14 +12,23 @@ import io
 import json
 from pathlib import Path
 
-from .coleta import MOTIVOS_LEGIVEIS
-from .models import Item
+from .coleta import MOTIVOS_LEGIVEIS, slug
+from .models import Corrida, Item
+from .regioes import classificar
+from .tags import etiquetas
 
 COLUNAS = [
     "data", "horario", "prova", "local", "regiao", "cidade", "distancias", "organizador", "plataforma",
     "preco_lote", "porte", "link_inscricao", "fonte", "fonte_url", "coletado_em", "situacao", "motivo",
-    "consulta", "extraido_por",
+    "consulta", "extraido_por", "etiquetas",
 ]
+
+_NOMES_ETIQUETAS = {"tematica": "temática", "noturna": "noturna"}
+
+
+def id_da_prova(c: Corrida) -> str:
+    """Identificador estável (data + nome): o app do corredor usa como id do documento da prova."""
+    return f"{c.data or 'sem-data'}-{slug(c.nome, 60)}"
 
 
 def _data_br(iso: str | None) -> str:
@@ -40,6 +49,7 @@ def _escrever(itens: list[Item], arquivo) -> None:
             c.link_inscricao or "", c.fonte_nome, c.fonte_url, _data_br(c.coletado_em), item.situacao,
             MOTIVOS_LEGIVEIS.get(item.motivo, item.motivo), item.consulta,
             {"llm": "IA", "heuristica": "regras", "demo": "demonstração"}.get(item.origem, item.origem),
+            ", ".join(_NOMES_ETIQUETAS[t] for t in etiquetas(c)),
         ])
 
 
@@ -64,10 +74,13 @@ def calendario_json(itens: list[Item], gerado_em: str) -> dict:
             continue
         c = item.corrida
         provas.append({
+            "id": id_da_prova(c),
             "nome": c.nome, "data": c.data, "horario": c.horario, "local": c.local, "regiao": c.regiao,
+            "regioes": list(classificar(c.local)[0]),  # chaves para filtrar: ["zona sul", "zona oeste"]
             "distancias": c.distancias, "organizador": c.organizador, "plataforma": c.plataforma,
             "preco": c.preco, "porte": c.porte, "link_inscricao": c.link_inscricao,
             "fonte": {"nome": c.fonte_nome, "url": c.fonte_url, "coletado_em": c.coletado_em},
+            "tags": etiquetas(c),
             "conferido": item.situacao == "aprovada",
         })
     provas.sort(key=lambda p: (p["data"] or "9999", p["horario"] or "99"))

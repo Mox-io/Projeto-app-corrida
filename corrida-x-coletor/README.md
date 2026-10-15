@@ -1,4 +1,10 @@
-# Corrida X — coletor de corridas de rua
+# Corrida X — coletor de corridas de rua + app do corredor
+
+Este repositório tem as duas partes do piloto:
+
+- **Coletor** (este README): pesquisa as provas e monta o calendário, no estilo do Prospector. Uso interno.
+- **App do corredor** ([`corredor/`](corredor/README.md)): o que o corredor usa. Calendário por região com temáticas e noturnas, "Vou correr" com os amigos, seguir corredores, treinos (manual ou GPX), grupos com ranking de km, parceiros por região e uma área de administração para publicar o `calendario.json` do coletor e marcar provas em destaque.
+
 
 Ferramenta da **fase 1 do projeto piloto Corrida X** (planilha-piloto): pesquisa corridas de rua por região de São Paulo e monta o calendário das próximas semanas, com fonte e link oficial de cada prova. Usa a mesma arquitetura do **Prospector** (mesma chave da AIsa, mesmo login Firebase, mesmo jeito de publicar na Vercel) e existe nas mesmas duas formas: **linha de comando** e **app web**.
 
@@ -10,7 +16,8 @@ O agente faz, sozinho, este fluxo:
 4. **Confere tudo no código**: a data precisa ser válida, a fonte precisa ser um dos resultados da busca e o link de inscrição só vale se for uma das URLs encontradas. O LLM não consegue inventar link.
 5. **Classifica a região no código** (não no LLM), com a tabela de locais do projeto piloto (Obelisco do Ibirapuera, Parque da Independência, Campo de Marte...) e uma lista de bairros.
 6. **Junta repetidas** (a mesma prova em duas páginas vira uma só, com os campos das duas) e faz a **triagem**.
-7. Gera a **planilha-piloto** (`calendario.csv`) e o **calendário em JSON** (`calendario.json`), no formato que o site da fase 2 pode ler.
+7. Marca as provas **temáticas** (Barbie, Disney, super-heróis, Harry Potter...) e **noturnas**, pelo nome e pelo horário (`corridax/tags.py`, lista aberta).
+8. Gera a **planilha-piloto** (`calendario.csv`) e o **calendário em JSON** (`calendario.json`), que a área de administração do app do corredor publica.
 
 O programa **não publica nada**: ele só monta os arquivos. Confira cada prova no site oficial antes de divulgar.
 
@@ -29,7 +36,7 @@ As descartadas continuam na planilha com o motivo, para dar para auditar (igual 
 - Busca: `POST /apis/v1/dataforseo/serp/google/organic/live/advanced` (listada no catálogo da AIsa). Existe também a rota de **Google Events**, mas o DataForSEO informa que ela só funciona em inglês, então não foi usada.
 - LLM: `POST /v1/chat/completions`, igual ao Prospector.
 
-> O programa foi testado com respostas simuladas (42 testes automáticos) e com o modo demonstração. **Ainda não rodou com uma chave real.** Na primeira vez, use `--listar-consultas` (sem custo) e depois uma única consulta (`--limite-consultas 1`) para conferir se o formato das respostas bate com o esperado.
+> O programa foi testado com respostas simuladas (testes automáticos) e com o modo demonstração. **Ainda não rodou com uma chave real.** Na primeira vez, use `--listar-consultas` (sem custo) e depois uma única consulta (`--limite-consultas 1`) para conferir se o formato das respostas bate com o esperado.
 
 ## Testar sem chave e sem custo (modo demonstração)
 
@@ -117,13 +124,15 @@ corridax/
   extracao.py           resultados -> provas: prompt, conferência do JSON, plano B por regras
   coleta.py             triagem, junção de repetidas, fluxo completo
   relatorio.py          calendario.csv e calendario.json
+  tags.py               etiquetas: temática e noturna
   demo_data.py          amostra do projeto piloto para o modo demonstração
   cli.py                orquestra tudo
 tests/                  testes do núcleo e do app web
+corredor/               app do corredor (index.html + regras do Firestore), ver corredor/README.md
 ```
 
 ## Próximos passos sugeridos
 
 - Rodar a fase 1 por 2 semanas e medir o que o piloto pede: provas catalogadas, % com link oficial e tempo de conferência por prova.
 - Acrescentar à tabela de `regioes.py` os locais que aparecerem como "a confirmar".
-- Na fase 2, o site do corredor lê o `calendario.json` (só as provas conferidas).
+- Publicar o `calendario.json` no app do corredor (Perfil > Administração) e acompanhar as confirmações por prova.

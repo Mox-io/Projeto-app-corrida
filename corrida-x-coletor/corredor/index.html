@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0f6e56" />
+<title>Corrida X — corridas de rua perto de você</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f6e56'/%3E%3Cpath d='M20 20l24 24M44 20L20 44' stroke='%23fff' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+/* Corrida X — app do corredor. Mesmo visual do Prospector/coletor: bege claro, verde de destaque,
+   fonte do sistema. Pensado para celular primeiro (barra de abas embaixo), funciona de 320px para cima. */
+:root {
+  --bg: #f7f6f3; --surface: #ffffff; --border: #dad7ce; --text: #22201b; --muted: #6b6a63;
+  --accent: #0f6e56; --accent-dark: #085041; --accent-bg: #e3f1ec;
+  --danger: #a32d2d; --danger-bg: #fcebeb; --warn-bg: #faeeda; --warn: #633806;
+  --ok-bg: #eaf3de; --ok: #27500a; --gold-bg: #fdf3d6; --gold: #6b4a00; --gold-border: #e9cf7f;
+  --radius: 10px; --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --tab-h: 62px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.45; }
+button, input, select, textarea { font: inherit; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.topo { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+        background: var(--surface); border-bottom: 1px solid var(--border); }
+.topo h1 { margin: 0; font-size: 17px; flex: 1; }
+.topo h1 small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 4px; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent-dark);
+          display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;
+          flex: none; border: 0; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+button.avatar { cursor: pointer; }
+.avatar--p { width: 26px; height: 26px; font-size: 11px; }
+
+.conteudo { max-width: 760px; margin: 0 auto; padding: 14px 16px calc(var(--tab-h) + 28px); }
+.carregando { text-align: center; color: var(--muted); padding: 60px 0; }
+
+.abas { position: fixed; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; background: var(--surface);
+        border-top: 1px solid var(--border); height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+        padding-bottom: env(safe-area-inset-bottom); }
+.abas button { flex: 1; border: 0; background: none; color: var(--muted); font-size: 11px; display: flex;
+               flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; min-width: 0; }
+.abas button svg { width: 22px; height: 22px; }
+.abas button[aria-current="page"] { color: var(--accent); font-weight: 600; }
+
+.painel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+.painel h2 { margin: 0 0 10px; font-size: 16px; }
+.painel h3 { margin: 14px 0 8px; font-size: 14px; }
+.dica { color: var(--muted); font-size: 13px; margin: 6px 0; }
+.erro { background: var(--danger-bg); color: var(--danger); padding: 10px 12px; border-radius: 8px; font-size: 14px; margin: 8px 0; }
+.aviso { background: var(--warn-bg); color: var(--warn); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin: 0 0 14px; }
+.ok { background: var(--ok-bg); color: var(--ok); padding: 10px 12px; border-radius: 8px; font-size: 14px; margin: 8px 0; }
+
+.campo { margin-bottom: 12px; }
+.campo label, .rotulo { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+input[type="text"], input[type="number"], input[type="date"], input[type="search"], input[type="url"], select, textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px;
+  background: #fff; color: var(--text); }
+textarea { resize: vertical; min-height: 64px; }
+.grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
+.grade--2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .grade { grid-template-columns: 1fr 1fr; } }
+.linha { display: flex; gap: 8px; align-items: center; }
+.linha > input, .linha > select { flex: 1; min-width: 0; }
+.opcao { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; cursor: pointer; }
+.opcao input { width: 18px; height: 18px; }
+
+.btn { padding: 10px 16px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff;
+       font-size: 15px; font-weight: 500; cursor: pointer; min-height: 42px; }
+.btn:hover { background: var(--accent-dark); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn--sec { background: transparent; color: var(--text); border-color: var(--border); }
+.btn--sec:hover { background: var(--bg); }
+.btn--sm { padding: 6px 12px; font-size: 13px; min-height: 34px; }
+.btn--perigo { background: transparent; color: var(--danger); border-color: #e7b9b9; }
+.btn--cheio { width: 100%; }
+.btn--google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: var(--text); border-color: var(--border); }
+.btn--google:hover { background: var(--bg); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px;
+                padding: 6px 12px; font-size: 13px; cursor: pointer; min-height: 34px; }
+.chips button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent-dark); border-color: #a9d3c4; font-weight: 600; }
+.filtros { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.rolagem { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; scrollbar-width: none; }
+.rolagem::-webkit-scrollbar { display: none; }
+.rolagem button { flex: none; }
+
+.selo { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #f1efe8; color: #444441; white-space: nowrap; }
+.selo--tema { background: #f3e8fb; color: #5b2a86; }
+.selo--noite { background: #e6e9f7; color: #2b3a7a; }
+.selo--gold { background: var(--gold-bg); color: var(--gold); }
+.selo--ok { background: var(--ok-bg); color: var(--ok); }
+.selo--warn { background: var(--warn-bg); color: var(--warn); }
+
+.dia { margin: 18px 0 8px; font-size: 13px; font-weight: 700; color: var(--accent-dark);
+       border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cartao { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.cartao--gold { border-color: var(--gold-border); background: linear-gradient(180deg, #fffaf0, #fff); }
+.cartao-cab { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.cartao-nome { font-weight: 650; font-size: 15px; overflow-wrap: anywhere; }
+.meta { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; margin-top: 2px; }
+.etiquetas { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+.cartao-rodape { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.cartao-rodape .espaco { flex: 1; }
+.links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; margin-top: 8px; }
+.links a { font-weight: 500; display: inline-block; padding: 4px 0; }
+.btn-vou { border: 1px solid var(--accent); background: var(--surface); color: var(--accent); border-radius: 999px;
+           padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; min-height: 38px; }
+.btn-vou[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.quem { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); min-width: 0; }
+.pilha { display: flex; }
+.pilha .avatar { margin-left: -6px; border: 2px solid #fff; }
+.pilha .avatar:first-child { margin-left: 0; }
+
+.proxima { display: flex; gap: 12px; align-items: center; background: var(--accent); color: #fff; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; }
+.proxima b { display: block; font-size: 15px; }
+.proxima .contagem { font-size: 26px; font-weight: 800; line-height: 1; text-align: center; min-width: 54px; }
+.proxima .contagem small { display: block; font-size: 11px; font-weight: 500; opacity: .85; }
+
+.numeros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+@media (max-width: 520px) { .numeros { grid-template-columns: 1fr 1fr; } }
+.numero { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.numero b { display: block; font-size: 22px; }
+.numero span { font-size: 12px; color: var(--muted); }
+
+.pessoa { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #efede7; }
+.pessoa:last-child { border-bottom: 0; }
+.pessoa .info { flex: 1; min-width: 0; }
+.pessoa .info b { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.pessoa .info span { font-size: 12px; color: var(--muted); }
+.evento { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #efede7; font-size: 14px; }
+.evento:last-child { border-bottom: 0; }
+.evento .quando { color: var(--muted); font-size: 12px; display: block; }
+
+table.ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ranking th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.ranking td { padding: 8px 4px; border-bottom: 1px solid #efede7; }
+.ranking td.num, .ranking th.num { text-align: right; white-space: nowrap; }
+.ranking tr.eu td { font-weight: 700; }
+.codigo { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; letter-spacing: 2px; background: var(--bg); padding: 2px 8px; border-radius: 6px; }
+
+.vazio { color: var(--muted); font-size: 14px; text-align: center; padding: 22px 8px; }
+.login { max-width: 420px; margin: 30px auto; text-align: center; }
+.login .logo { width: 64px; height: 64px; margin: 0 auto 10px; }
+.login h2 { font-size: 22px; margin: 0 0 6px; }
+.login ul { text-align: left; font-size: 14px; color: var(--muted); padding-left: 20px; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + 16px); transform: translateX(-50%); background: #22201b; color: #fff;
+         padding: 10px 16px; border-radius: 999px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
+.voltar { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 6px 0; font-size: 14px; }
+details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 500; }
+</style>
+</head>
+<body>
+<header class="topo" id="topo" hidden>
+  <h1>Corrida X <small id="topo-sub"></small></h1>
+  <button type="button" class="avatar" id="btn-perfil" aria-label="Meu perfil"></button>
+</header>
+
+<main class="conteudo" id="conteudo">
+  <p class="carregando" id="carregando">Carregando...</p>
+</main>
+
+<nav class="abas" id="abas" hidden aria-label="Seções">
+  <button type="button" data-aba="provas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Provas</button>
+  <button type="button" data-aba="atividade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>Amigos</button>
+  <button type="button" data-aba="treinos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Treinos</button>
+  <button type="button" data-aba="grupos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Grupos</button>
+  <button type="button" data-aba="parceiros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg>Parceiros</button>
+</nav>
+
+<script type="module">
+// ============================================================================
+//  Corrida X — app do corredor (protótipo do piloto)
+//
+//  Um arquivo só (HTML + CSS + JS), como o B31. Dados no Firebase (Auth com Google + Firestore).
+//  Sem configuração do Firebase, o app abre em MODO DEMONSTRAÇÃO: dados de exemplo guardados
+//  só neste navegador, sem login real. As provas da demonstração vêm do coletor (amostra do
+//  projeto piloto) e os links são fictícios (domínios .example).
+//
+//  Regras de segurança da página:
+//   1. Nada que o usuário digita ou que vem do banco entra como HTML: tudo via textContent (el()).
+//   2. Só links http(s) viram <a>; WhatsApp vira https://wa.me/<só dígitos>.
+//   3. As permissões de verdade ficam no firestore.rules (a página pode ser alterada por qualquer um).
+// ============================================================================
+
+// ------------------------- CONFIGURAÇÃO -------------------------
+// Cole aqui a configuração do app Web do Firebase (Configurações do projeto > Seus apps).
+// Deixe null para o modo demonstração.
+const FIREBASE_CONFIG = null;
+/* Exemplo:
+const FIREBASE_CONFIG = {
+  apiKey: "...", authDomain: "seu-projeto.firebaseapp.com", projectId: "seu-projeto", appId: "...",
+};
+*/
+const CONTATO_PARCEIROS = "mailto:contato@exemplo.com?subject=Quero%20ser%20parceiro%20do%20Corrida%20X";
+const CIDADE = "São Paulo";
+const FIREBASE_VERSAO = "10.13.0";
+
+const REGIOES = ["zona sul", "zona norte", "zona leste", "zona oeste", "centro"];
+const NOME_REGIAO = { "zona sul": "Zona sul", "zona norte": "Zona norte", "zona leste": "Zona leste", "zona oeste": "Zona oeste", centro: "Centro" };
+const DISTANCIAS = [
+  { chave: "ate5", nome: "Até 5 km", min: 0, max: 5.99 },
+  { chave: "10", nome: "6 a 12 km", min: 6, max: 12.99 },
+  { chave: "meia", nome: "15 a 21 km", min: 13, max: 21.5 },
+  { chave: "maratona", nome: "Maratona", min: 40, max: 50 },
+];
+const CATEGORIAS = { nutricao: "Nutrição", fisioterapia: "Fisioterapia", assessoria: "Assessoria de corrida", consultoria: "Consultoria / treinador", outros: "Outros" };
+const LIMITE_IN = 30; // o Firestore aceita até 30 valores num filtro "in"
+
+// ------------------------- UTILITÁRIOS -------------------------
+const $ = (s, r = document) => r.querySelector(s);
+
+function el(tag, atributos = {}, ...filhos) {
+  const no = tag === "svg" ? document.createElementNS("http://www.w3.org/2000/svg", "svg") : document.createElement(tag);
+  for (const [k, v] of Object.entries(atributos)) {
+    if (v === false || v == null) continue;
+    if (k === "class") no.setAttribute("class", v);
+    else if (k.startsWith("on") && typeof v === "function") no.addEventListener(k.slice(2), v);
+    else no.setAttribute(k, v === true ? "" : v);
+  }
+  for (const f of filhos.flat(Infinity)) if (f != null && f !== false) no.append(f);
+  return no;
+}
+
+function normalizar(t) {
+  return String(t || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+const slug = (t) => normalizar(t).replace(/ /g, "-").slice(0, 60) || "item";
+const hojeISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const dataBR = (iso) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
+const dataLonga = (iso) => {
+  const t = new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+  return t.charAt(0).toUpperCase() + t.slice(1); // "Domingo, 18 de outubro"
+};
+const diasAte = (iso, hoje) => Math.round((new Date(`${iso}T12:00:00`) - new Date(`${hoje}T12:00:00`)) / 86400000);
+const km = (n) => `${(Math.round(n * 10) / 10).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+const iniciais = (nome) => normalizar(nome).split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "?";
+
+function quandoRelativo(isoDataHora) {
+  const seg = (Date.now() - new Date(isoDataHora).getTime()) / 1000;
+  if (!isFinite(seg)) return "";
+  if (seg < 60) return "agora";
+  if (seg < 3600) return `há ${Math.floor(seg / 60)} min`;
+  if (seg < 86400) return `há ${Math.floor(seg / 3600)} h`;
+  const d = Math.floor(seg / 86400);
+  return d === 1 ? "ontem" : `há ${d} dias`;
+}
+
+function linkSeguro(url, texto) {
+  if (typeof url !== "string" || !/^https?:\/\/[^\s]+$/i.test(url)) return null;
+  return el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, texto);
+}
+const linkWhats = (numero, texto) => {
+  const dig = String(numero || "").replace(/\D/g, "");
+  return dig.length >= 10 ? linkSeguro(`https://wa.me/${dig.startsWith("55") ? dig : "55" + dig}`, texto) : null;
+};
+const linkInsta = (h) => {
+  const u = String(h || "").replace(/^@/, "").trim();
+  return /^[A-Za-z0-9._]{1,30}$/.test(u) ? linkSeguro(`https://instagram.com/${u}`, `@${u}`) : null;
+};
+
+function avatar(pessoa, pequeno = false) {
+  const a = el("span", { class: `avatar${pequeno ? " avatar--p" : ""}`, title: pessoa?.nome || "" });
+  if (pessoa?.foto && /^https:\/\//.test(pessoa.foto)) a.append(el("img", { src: pessoa.foto, alt: "", referrerpolicy: "no-referrer" }));
+  else a.textContent = iniciais(pessoa?.nome);
+  return a;
+}
+
+function nomesCurtos(pessoas) {
+  const n = pessoas.map((p) => (p.nome || "").split(" ")[0]);
+  if (n.length <= 2) return n.join(" e ");
+  return `${n.slice(0, 2).join(", ")} e mais ${n.length - 2}`;
+}
+
+let temporizadorToast;
+function toast(msg) {
+  let t = $("#toast");
+  if (!t) document.body.append((t = el("div", { id: "toast", class: "toast", role: "status" })));
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(temporizadorToast);
+  temporizadorToast = setTimeout(() => (t.hidden = true), 2600);
+}
+
+// Distâncias da prova em km ("5 km", "10K", "21 km", "meia maratona") -> [5, 10, 21.1]
+function distanciasEmKm(lista) {
+  const saida = [];
+  for (const d of lista || []) {
+    const t = normalizar(d);
+    if (/meia maratona|half/.test(t)) saida.push(21.1);
+    else if (/maratona|marathon/.test(t)) saida.push(42.2);
+    const m = String(d).replace(",", ".").match(/(\d+(?:\.\d+)?)\s*k/i);
+    if (m) saida.push(Number(m[1]));
+  }
+  return saida;
+}
+
+// Etiquetas: usa as do coletor; se a prova veio sem, calcula pelo nome (mesma lista do coletor).
+const TEMAS = ["barbie", "power rangers", "harry potter", "senhor dos aneis", "hobbit", "disney", "marvel", "star wars", "mulher maravilha",
+  "super heroi", "super herois", "batman", "superman", "homem aranha", "cartoon", "tom jerry", "looney tunes", "mickey", "minions",
+  "pokemon", "turma da monica", "hello kitty", "frozen", "zumbi", "zombie", "halloween", "fantasia", "color run", "neon"];
+function etiquetas(p) {
+  if (Array.isArray(p.tags)) return p.tags;
+  const n = ` ${normalizar(p.nome)} `;
+  const t = [];
+  if (TEMAS.some((x) => n.includes(` ${x} `))) t.push("tematica");
+  if (/ (night run|noturna|noturno|night) /.test(n) || (p.horario && Number(p.horario.slice(0, 2)) >= 18)) t.push("noturna");
+  return t;
+}
+
+// ------------------------- GPX -------------------------
+function lerGpx(texto) {
+  const xml = new DOMParser().parseFromString(texto, "application/xml");
+  if (xml.querySelector("parsererror")) throw new Error("Arquivo GPX inválido.");
+  const pontos = [...xml.querySelectorAll("trkpt, rtept")].map((p) => ({
+    lat: Number(p.getAttribute("lat")),
+    lon: Number(p.getAttribute("lon")),
+    t: p.querySelector("time")?.textContent || null,
+  })).filter((p) => isFinite(p.lat) && isFinite(p.lon));
+  if (pontos.length < 2) throw new Error("O GPX não tem um percurso (pontos de trajeto).");
+  const R = 6371;
+  const rad = (g) => (g * Math.PI) / 180;
+  let total = 0;
+  for (let i = 1; i < pontos.length; i++) {
+    const a = pontos[i - 1], b = pontos[i];
+    const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+    total += 2 * R * Math.asin(Math.sqrt(h));
+  }
+  const ini = pontos.find((p) => p.t)?.t, fim = [...pontos].reverse().find((p) => p.t)?.t;
+  const minutos = ini && fim ? Math.round((new Date(fim) - new Date(ini)) / 60000) : null;
+  const nome = xml.querySelector("trk > name, metadata > name")?.textContent?.trim() || "";
+  const data = ini ? ini.slice(0, 10) : null;
+  return { km: Math.round(total * 100) / 100, minutos: minutos > 0 ? minutos : null, data, nome };
+}
+
+// ------------------------- VALIDAÇÃO (espelha o firestore.rules) -------------------------
+function validarPerfil(p) {
+  const nome = String(p.nome || "").trim().replace(/\s+/g, " ");
+  if (nome.length < 2 || nome.length > 60) throw new Error("O nome deve ter de 2 a 60 caracteres.");
+  const handle = String(p.handle || "").trim().replace(/^@/, "").toLowerCase();
+  if (!/^[a-z0-9_.]{3,20}$/.test(handle)) throw new Error("O @usuário deve ter de 3 a 20 letras, números, ponto ou _.");
+  if (!REGIOES.includes(p.regiao)) throw new Error("Escolha sua região.");
+  const instagram = String(p.instagram || "").trim().replace(/^@/, "");
+  if (instagram && !/^[A-Za-z0-9._]{1,30}$/.test(instagram)) throw new Error("Instagram inválido.");
+  const distancias = (p.distancias || []).filter((d) => DISTANCIAS.some((x) => x.chave === d));
+  return { nome, handle, regiao: p.regiao, instagram, distancias, nomeBusca: normalizar(nome), foto: p.foto || null };
+}
+
+function validarTreino(t) {
+  const kmN = Number(String(t.km).replace(",", "."));
+  if (!(kmN > 0 && kmN <= 300)) throw new Error("Informe a distância em km (até 300).");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t.data || "")) throw new Error("Informe a data do treino.");
+  if (t.data > hojeISO() && !estado.demo) throw new Error("A data do treino não pode ser no futuro.");
+  const minutos = t.minutos === "" || t.minutos == null ? null : Number(t.minutos);
+  if (minutos != null && !(Number.isInteger(minutos) && minutos > 0 && minutos <= 2000)) throw new Error("Tempo inválido (minutos inteiros).");
+  const descricao = String(t.descricao || "").trim().slice(0, 120);
+  return { km: Math.round(kmN * 100) / 100, data: t.data, minutos, descricao, origem: t.origem === "gpx" ? "gpx" : "manual" };
+}
+
+function codigoNovo() {
+  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem 0/O e 1/I para não confundir
+  const v = new Uint32Array(6);
+  crypto.getRandomValues(v);
+  return [...v].map((n) => letras[n % letras.length]).join("");
+}
+
+// ============================================================================
+//  DADOS — duas implementações com a MESMA interface:
+//    StoreDemo (memória + localStorage)  e  StoreFirebase (Auth Google + Firestore)
+// ============================================================================
+
+// Amostra do projeto piloto gerada pelo coletor (python -m corridax --demo, todas as regiões, 12 semanas).
+const DEMO_PROVAS = [{"id":"2026-10-18-stfrs-center-norte-iii-santander-track-field","nome":"STFRS Center Norte III (Santander Track&Field)","data":"2026-10-18","horario":"06:30","local":"Shopping Center Norte","regiao":"Zona norte","regioes":["zona norte"],"distancias":["5 km","10 km"],"organizador":"TF Sports","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/stfrs-center-norte-iii-santander-track-field","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/stfrs-center-norte-iii-santander-track-field","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-10-18-6a-sportv-run-super-10k","nome":"6ª SporTV Run, Super 10K","data":"2026-10-18","horario":"07:00","local":"Obelisco do Ibirapuera","regiao":"Zona sul","regioes":["zona sul"],"distancias":["10 km"],"organizador":"Yescom","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/6a-sportv-run-super-10k","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/6a-sportv-run-super-10k","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-10-18-corrida-cartoon","nome":"Corrida Cartoon","data":"2026-10-18","horario":"07:00","local":"PAMA, Campo de Marte","regiao":"Zona norte","regioes":["zona norte"],"distancias":["5 km"],"organizador":"Yescom","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/corrida-cartoon","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-cartoon","coletado_em":"2026-10-15"},"tags":["tematica"],"conferido":true},{"id":"2026-10-18-smart-fit-run","nome":"Smart Fit Run","data":"2026-10-18","horario":"07:00","local":"Parque da Independência","regiao":"Sul/sudeste (Ipiranga)","regioes":["zona sul"],"distancias":["5 km","10 km"],"organizador":"Smart Fit e TTK","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/smart-fit-run","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/smart-fit-run","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-10-18-8a-corrida-do-trigo","nome":"8ª Corrida do Trigo","data":"2026-10-18","horario":"07:00","local":"Praça Charles Miller","regiao":"Centro/oeste","regioes":["centro","zona oeste"],"distancias":["5 km","10 km"],"organizador":"Sindustrigo","plataforma":null,"preco":null,"porte":null,"link_inscricao":null,"fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/8a-corrida-do-trigo","coletado_em":"2026-10-15"},"tags":[],"conferido":false},{"id":"2026-10-18-athenas-run-longer","nome":"Athenas Run Longer","data":"2026-10-18","horario":null,"local":"Parque do Povo, Marginal Pinheiros","regiao":"Oeste","regioes":["zona oeste"],"distancias":["10 km","15 km"],"organizador":"Iguana Sports","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/athenas-run-longer","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/athenas-run-longer","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-10-24-night-run-etapa-2","nome":"Night Run, etapa 2","data":"2026-10-24","horario":"19:00","local":"PAMA, Campo de Marte","regiao":"Zona norte","regioes":["zona norte"],"distancias":["5 km","10 km"],"organizador":"TTK","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/night-run-etapa-2","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/night-run-etapa-2","coletado_em":"2026-10-15"},"tags":["noturna"],"conferido":true},{"id":"2026-11-01-corrida-dorina","nome":"Corrida Dorina","data":"2026-11-01","horario":"07:30","local":"Parque da Independência","regiao":"Sul/sudeste (Ipiranga)","regioes":["zona sul"],"distancias":["5 km"],"organizador":"Fundação Dorina","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/corrida-dorina","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-dorina","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-01-correndo-contra-o-cancer","nome":"Correndo Contra o Câncer","data":"2026-11-01","horario":null,"local":"Ponte Estaiada, Marginal Pinheiros","regiao":"Sul/oeste","regioes":["zona sul","zona oeste"],"distancias":["5 km","10 km"],"organizador":"Yescom","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/correndo-contra-o-cancer","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/correndo-contra-o-cancer","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-01-circuito-mais-mulher-2026","nome":"Circuito Mais Mulher 2026","data":"2026-11-01","horario":null,"local":"Praça Charles Miller","regiao":"Centro/oeste","regioes":["centro","zona oeste"],"distancias":["5 km"],"organizador":"Secretaria Municipal de Esportes e Lazer","plataforma":null,"preco":null,"porte":null,"link_inscricao":null,"fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/circuito-mais-mulher-2026","coletado_em":"2026-10-15"},"tags":[],"conferido":false},{"id":"2026-11-08-circuito-popular-de-corridas-de-rua","nome":"Circuito Popular de Corridas de Rua","data":"2026-11-08","horario":"07:00","local":"Praça do Patriarca","regiao":"Centro","regioes":["centro"],"distancias":["5 km"],"organizador":"FENATS","plataforma":null,"preco":null,"porte":null,"link_inscricao":null,"fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/circuito-popular-de-corridas-de-rua","coletado_em":"2026-10-15"},"tags":[],"conferido":false},{"id":"2026-11-08-eco-run","nome":"Eco Run","data":"2026-11-08","horario":null,"local":"Parque Villa-Lobos","regiao":"Oeste","regioes":["zona oeste"],"distancias":["5 km","10 km"],"organizador":"Instituto Imaginação","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/eco-run","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/eco-run","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-15-meia-de-sampa","nome":"Meia de Sampa","data":"2026-11-15","horario":"06:00","local":"Parque do Povo, Marginal Pinheiros","regiao":"Oeste","regioes":["zona oeste"],"distancias":["10 km","21 km"],"organizador":"Ação Correta","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/meia-de-sampa","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/meia-de-sampa","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-15-circuito-de-corridas-caixa-etapa-sp","nome":"Circuito de Corridas Caixa, etapa SP","data":"2026-11-15","horario":"06:30","local":"Parque da Independência","regiao":"Sul/sudeste (Ipiranga)","regioes":["zona sul"],"distancias":["5 km","10 km"],"organizador":"HT Sports","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/circuito-de-corridas-caixa-etapa-sp","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/circuito-de-corridas-caixa-etapa-sp","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-15-corrida-tom-jerry","nome":"Corrida Tom & Jerry","data":"2026-11-15","horario":"07:00","local":"PAMA, Campo de Marte","regiao":"Zona norte","regioes":["zona norte"],"distancias":["3 km","5 km"],"organizador":"Yescom","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/corrida-tom-jerry","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-tom-jerry","coletado_em":"2026-10-15"},"tags":["tematica"],"conferido":true},{"id":"2026-11-15-4a-edicao-do-desafio-minalba","nome":"4ª edição do Desafio Minalba","data":"2026-11-15","horario":null,"local":"Obelisco do Ibirapuera","regiao":"Zona sul","regioes":["zona sul"],"distancias":["5 km","10 km"],"organizador":"Minalba Brasil","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/4a-edicao-do-desafio-minalba","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/4a-edicao-do-desafio-minalba","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-15-corrida-live-run","nome":"Corrida Live! Run","data":"2026-11-15","horario":null,"local":"Praça Charles Miller","regiao":"Centro/oeste","regioes":["centro","zona oeste"],"distancias":["5 km","10 km"],"organizador":"Instituto Eu Vivo Esporte","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/corrida-live-run","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-live-run","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-20-corre-kilombo","nome":"Corre Kilombo","data":"2026-11-20","horario":null,"local":"Vale do Anhangabaú","regiao":"Centro","regioes":["centro"],"distancias":["5 km"],"organizador":"Vega Sports","plataforma":null,"preco":null,"porte":null,"link_inscricao":null,"fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corre-kilombo","coletado_em":"2026-10-15"},"tags":[],"conferido":false},{"id":"2026-11-22-12a-corrida-mulher-maravilha","nome":"12ª Corrida Mulher Maravilha","data":"2026-11-22","horario":"07:00","local":"Praça do Patriarca","regiao":"Centro","regioes":["centro"],"distancias":["5 km","10 km"],"organizador":"Yescom","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/12a-corrida-mulher-maravilha","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/12a-corrida-mulher-maravilha","coletado_em":"2026-10-15"},"tags":["tematica"],"conferido":true},{"id":"2026-11-22-corrida-volta-de-santana","nome":"Corrida Volta de Santana","data":"2026-11-22","horario":null,"local":"Clube Esperia","regiao":"Zona norte","regioes":["zona norte"],"distancias":["5 km","10 km"],"organizador":"Clube Esperia","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/corrida-volta-de-santana","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-volta-de-santana","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-22-disney-magic-run","nome":"Disney Magic Run","data":"2026-11-22","horario":null,"local":"Obelisco do Ibirapuera","regiao":"Zona sul","regioes":["zona sul"],"distancias":["5 km","10 km"],"organizador":"Global Vita","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/disney-magic-run","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/disney-magic-run","coletado_em":"2026-10-15"},"tags":["tematica"],"conferido":true},{"id":"2026-11-29-venus-women-s-half-marathon","nome":"Venus Women's Half Marathon","data":"2026-11-29","horario":"06:00","local":"Parque do Povo, Marginal Pinheiros","regiao":"Oeste","regioes":["zona oeste"],"distancias":["5 km","10 km","21 km"],"organizador":"Iguana Sports","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/venus-women-s-half-marathon","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/venus-women-s-half-marathon","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-11-29-corrida-dos-super-herois-exemplo","nome":"Corrida dos Super-Heróis (exemplo)","data":"2026-11-29","horario":"07:00","local":"Parque Villa-Lobos","regiao":"Oeste","regioes":["zona oeste"],"distancias":["3 km","5 km"],"organizador":"Organizador fictício","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/corrida-dos-super-herois-exemplo","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-dos-super-herois-exemplo","coletado_em":"2026-10-15"},"tags":["tematica"],"conferido":true},{"id":"2026-11-29-corrida-do-bairro-ficticio","nome":"Corrida do Bairro Fictício","data":"2026-11-29","horario":null,"local":"Praça Fictícia, Jardim Exemplo","regiao":"A confirmar","regioes":[],"distancias":["5 km"],"organizador":"Associação fictícia","plataforma":null,"preco":null,"porte":null,"link_inscricao":null,"fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/corrida-do-bairro-ficticio","coletado_em":"2026-10-15"},"tags":[],"conferido":false},{"id":"2026-12-12-sao-silvestrinha","nome":"São Silvestrinha","data":"2026-12-12","horario":null,"local":"Centro Olímpico","regiao":"A confirmar","regioes":[],"distancias":["infantil"],"organizador":"Vega Sports","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/sao-silvestrinha","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/sao-silvestrinha","coletado_em":"2026-10-15"},"tags":[],"conferido":false},{"id":"2026-12-20-circuito-das-estacoes-edicao-verao","nome":"Circuito das Estações, edição Verão","data":"2026-12-20","horario":null,"local":"Praça Charles Miller","regiao":"Centro/oeste","regioes":["centro","zona oeste"],"distancias":["5 km","10 km"],"organizador":"TTK","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/circuito-das-estacoes-edicao-verao","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/circuito-das-estacoes-edicao-verao","coletado_em":"2026-10-15"},"tags":[],"conferido":true},{"id":"2026-12-31-101a-corrida-internacional-de-sao-silvestre","nome":"101ª Corrida Internacional de São Silvestre","data":"2026-12-31","horario":"08:00","local":"Avenida Paulista e Centro","regiao":"Centro","regioes":["centro"],"distancias":["15 km"],"organizador":"FCL Vega Sports","plataforma":"Plataforma fictícia (demonstração)","preco":null,"porte":null,"link_inscricao":"https://inscricoes.example/evento/101a-corrida-internacional-de-sao-silvestre","fonte":{"nome":"agenda.example","url":"https://agenda.example/corridas/101a-corrida-internacional-de-sao-silvestre","coletado_em":"2026-10-15"},"tags":[],"conferido":true}];
+
+const DEMO_HOJE = "2026-10-15"; // a demonstração usa uma data fixa para a amostra não envelhecer
+
+class StoreDemo {
+  constructor() {
+    this.demo = true;
+    this.chave = "corridax-corredor-demo-v1";
+    this.d = this.carregar() || this.semente();
+  }
+  hoje() { return DEMO_HOJE; }
+  carregar() {
+    try { return JSON.parse(localStorage.getItem(this.chave) || "null"); } catch { return null; }
+  }
+  salvar() {
+    try { localStorage.setItem(this.chave, JSON.stringify(this.d)); } catch { /* sem armazenamento: só memória */ }
+  }
+  zerar() {
+    try { localStorage.removeItem(this.chave); } catch { /* ignora */ }
+    this.d = this.semente();
+  }
+  semente() {
+    const pessoas = {
+      "demo-ana": { nome: "Ana Lima", handle: "ana.corre", regiao: "zona sul", distancias: ["10", "meia"], instagram: "" },
+      "demo-bruno": { nome: "Bruno Costa", handle: "brunopace", regiao: "zona oeste", distancias: ["10"], instagram: "" },
+      "demo-carla": { nome: "Carla Souza", handle: "carla10k", regiao: "zona sul", distancias: ["ate5", "10"], instagram: "" },
+      "demo-eduardo": { nome: "Eduardo Reis", handle: "edu.maratona", regiao: "zona norte", distancias: ["meia", "maratona"], instagram: "" },
+      "demo-fernanda": { nome: "Fernanda Alves", handle: "fe.alves", regiao: "centro", distancias: ["ate5"], instagram: "" },
+    };
+    for (const p of Object.values(pessoas)) p.nomeBusca = normalizar(p.nome);
+    const provas = {};
+    for (const p of DEMO_PROVAS) provas[p.id] = { ...p, destaque: false };
+    const ids = Object.keys(provas);
+    const destaque = ids.find((id) => id.includes("sportv")) || ids[0];
+    if (destaque) provas[destaque].destaque = true;
+    const confirmar = (uid, trecho, dias) => {
+      const id = ids.find((x) => x.includes(trecho));
+      if (!id) return null;
+      return [`${id}_${uid}`, { provaId: id, uid, nome: pessoas[uid].nome, data: provas[id].data, em: new Date(Date.now() - dias * 86400000).toISOString() }];
+    };
+    const confirmacoes = Object.fromEntries([
+      confirmar("demo-ana", "sportv", 1), confirmar("demo-carla", "sportv", 2), confirmar("demo-bruno", "meia-de-sampa", 0.2),
+      confirmar("demo-ana", "meia-de-sampa", 3), confirmar("demo-eduardo", "corrida-cartoon", 4), confirmar("demo-carla", "disney", 1.5),
+      confirmar("demo-fernanda", "mulher-maravilha", 2), confirmar("demo-bruno", "eco-run", 5), confirmar("demo-ana", "super-herois", 0.5),
+    ].filter(Boolean));
+    const treinos = {};
+    const addTreino = (uid, data, kmN, minutos, descricao) => {
+      const id = `t-${uid}-${data}-${kmN}`;
+      treinos[id] = { uid, nome: pessoas[uid].nome, data, km: kmN, minutos, descricao, origem: "manual", em: `${data}T08:00:00.000Z` };
+    };
+    [["demo-ana", "2026-10-01", 8.2, 47, "Ibirapuera"], ["demo-ana", "2026-10-05", 12, 70, "Longão"], ["demo-ana", "2026-10-12", 6.5, 36, ""],
+     ["demo-ana", "2026-09-20", 10, 58, ""], ["demo-bruno", "2026-10-03", 5, 27, "Tiro"], ["demo-bruno", "2026-10-10", 15.3, 88, "Villa-Lobos"],
+     ["demo-bruno", "2026-10-14", 7.1, 40, ""], ["demo-carla", "2026-10-02", 5, 31, ""], ["demo-carla", "2026-10-09", 5.4, 33, ""],
+     ["demo-eduardo", "2026-10-04", 21.1, 115, "Treino de meia"], ["demo-eduardo", "2026-10-11", 30, 170, "Longão"],
+    ].forEach((t) => addTreino(...t));
+    const grupos = {
+      "g-ibira": { nome: "Turma do Ibirapuera", codigo: "IBIRA2", dono: "demo-ana", membros: ["demo-ana", "demo-bruno", "demo-carla"], criadoEm: "2026-09-01T10:00:00.000Z" },
+    };
+    const parceiros = {
+      "p1": { nome: "Nutri Esportiva (exemplo)", categoria: "nutricao", regiao: "zona sul", cidade: "São Paulo", descricao: "Plano alimentar para provas de 5 km à maratona.", site: "https://parceiro.example/nutri", instagram: "", whatsapp: "" },
+      "p2": { nome: "Fisio do Corredor (exemplo)", categoria: "fisioterapia", regiao: "zona oeste", cidade: "São Paulo", descricao: "Prevenção de lesão e retorno aos treinos.", site: "https://parceiro.example/fisio", instagram: "", whatsapp: "" },
+      "p3": { nome: "Assessoria Pace Certo (exemplo)", categoria: "assessoria", regiao: "zona sul", cidade: "São Paulo", descricao: "Treinos em grupo no Ibirapuera, terça e quinta.", site: "https://parceiro.example/assessoria", instagram: "", whatsapp: "" },
+      "p4": { nome: "Treinador do Lago (exemplo)", categoria: "consultoria", regiao: "", cidade: "Bragança Paulista", descricao: "Planilha de treino e acompanhamento online.", site: "https://parceiro.example/treinador", instagram: "", whatsapp: "" },
+    };
+    return { usuarios: pessoas, provas, confirmacoes, follows: { "demo-eu_demo-ana": { seguidor: "demo-eu", alvo: "demo-ana" }, "demo-eu_demo-bruno": { seguidor: "demo-eu", alvo: "demo-bruno" } }, treinos, grupos, parceiros, admin: true, logado: false };
+  }
+
+  // --- sessão ---
+  async iniciar(aoMudar) {
+    this.aoMudar = aoMudar;
+    aoMudar(this.d.logado ? { uid: "demo-eu", email: "voce@demo", nome: "Você", foto: null } : null);
+  }
+  async entrar() {
+    this.d.logado = true;
+    this.salvar();
+    this.aoMudar({ uid: "demo-eu", email: "voce@demo", nome: "", foto: null });
+  }
+  async sair() {
+    this.d.logado = false;
+    this.salvar();
+    this.aoMudar(null);
+  }
+  get uid() { return "demo-eu"; }
+
+  // --- perfis ---
+  async perfil(uid) { return this.d.usuarios[uid] ? { uid, ...this.d.usuarios[uid] } : null; }
+  async salvarPerfil(dados) { this.d.usuarios[this.uid] = validarPerfil(dados); this.salvar(); }
+  async usuarios(uids) {
+    const m = {};
+    for (const u of uids) if (this.d.usuarios[u]) m[u] = { uid: u, ...this.d.usuarios[u] };
+    return m;
+  }
+  async buscarUsuarios(texto) {
+    const t = normalizar(texto).replace(/^@/, "");
+    if (t.length < 2) return [];
+    return Object.entries(this.d.usuarios).filter(([u, p]) => u !== this.uid && (p.nomeBusca.includes(t) || p.handle.includes(t.replace(/ /g, ""))))
+      .slice(0, 20).map(([uid, p]) => ({ uid, ...p }));
+  }
+
+  // --- provas e confirmações ---
+  async provas() {
+    const hoje = this.hoje();
+    return Object.entries(this.d.provas).map(([id, p]) => ({ ...p, id })).filter((p) => p.data >= hoje).sort((a, b) => a.data.localeCompare(b.data));
+  }
+  async confirmacoes() {
+    const hoje = this.hoje();
+    return Object.values(this.d.confirmacoes).filter((c) => c.data >= hoje);
+  }
+  async confirmar(prova, sim, nome) {
+    const id = `${prova.id}_${this.uid}`;
+    if (sim) this.d.confirmacoes[id] = { provaId: prova.id, uid: this.uid, nome, data: prova.data, em: new Date().toISOString() };
+    else delete this.d.confirmacoes[id];
+    this.salvar();
+  }
+
+  // --- seguir ---
+  async seguindo() { return Object.values(this.d.follows).filter((f) => f.seguidor === this.uid).map((f) => f.alvo); }
+  async seguidores(uid) { return Object.values(this.d.follows).filter((f) => f.alvo === uid).length; }
+  async seguir(alvo, sim) {
+    const id = `${this.uid}_${alvo}`;
+    if (sim) this.d.follows[id] = { seguidor: this.uid, alvo, em: new Date().toISOString() };
+    else delete this.d.follows[id];
+    this.salvar();
+  }
+  async feed(uids) {
+    const set = new Set(uids);
+    const conf = Object.values(this.d.confirmacoes).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "confirmacao", ...c }));
+    const tr = Object.values(this.d.treinos).filter((t) => set.has(t.uid)).map((t) => ({ tipo: "treino", ...t }));
+    return [...conf, ...tr].sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
+  }
+
+  // --- treinos ---
+  async treinos(uid) {
+    return Object.entries(this.d.treinos).filter(([, t]) => t.uid === uid).map(([id, t]) => ({ id, ...t })).sort((a, b) => b.data.localeCompare(a.data));
+  }
+  async adicionarTreino(t, nome) {
+    const v = validarTreino(t);
+    this.d.treinos[`t-${Date.now()}`] = { ...v, uid: this.uid, nome, em: new Date().toISOString() };
+    this.salvar();
+  }
+  async removerTreino(id) {
+    if (this.d.treinos[id]?.uid === this.uid) delete this.d.treinos[id];
+    this.salvar();
+  }
+  async treinosDe(uids, desde) {
+    const set = new Set(uids);
+    return Object.values(this.d.treinos).filter((t) => set.has(t.uid) && t.data >= desde);
+  }
+
+  // --- grupos ---
+  async meusGrupos() {
+    return Object.entries(this.d.grupos).filter(([, g]) => g.membros.includes(this.uid)).map(([id, g]) => ({ id, ...g }));
+  }
+  async criarGrupo(nome) {
+    const n = String(nome || "").trim();
+    if (n.length < 3 || n.length > 40) throw new Error("O nome do grupo deve ter de 3 a 40 caracteres.");
+    const id = `g-${Date.now()}`;
+    this.d.grupos[id] = { nome: n, codigo: codigoNovo(), dono: this.uid, membros: [this.uid], criadoEm: new Date().toISOString() };
+    this.salvar();
+    return { id, ...this.d.grupos[id] };
+  }
+  async entrarGrupo(codigo) {
+    const c = String(codigo || "").trim().toUpperCase();
+    const achado = Object.entries(this.d.grupos).find(([, g]) => g.codigo === c);
+    if (!achado) throw new Error("Nenhum grupo com esse código.");
+    const [, g] = achado;
+    if (g.membros.includes(this.uid)) throw new Error("Você já está nesse grupo.");
+    if (g.membros.length >= LIMITE_IN) throw new Error(`O grupo já tem ${LIMITE_IN} pessoas (limite do piloto).`);
+    g.membros.push(this.uid);
+    this.salvar();
+    return g;
+  }
+  async sairGrupo(id) {
+    const g = this.d.grupos[id];
+    if (!g) return;
+    if (g.dono === this.uid) delete this.d.grupos[id];
+    else g.membros = g.membros.filter((u) => u !== this.uid);
+    this.salvar();
+  }
+
+  // --- parceiros ---
+  async parceiros() { return Object.entries(this.d.parceiros).map(([id, p]) => ({ id, ...p })); }
+
+  // --- administração ---
+  async ehAdmin() { return Boolean(this.d.admin); }
+  async importarProvas(lista) {
+    for (const p of lista) this.d.provas[p.id] = { ...p, destaque: this.d.provas[p.id]?.destaque || false };
+    this.salvar();
+  }
+  async todasProvas() { return Object.entries(this.d.provas).map(([id, p]) => ({ ...p, id })).sort((a, b) => a.data.localeCompare(b.data)); }
+  async destacar(id, sim) { if (this.d.provas[id]) this.d.provas[id].destaque = sim; this.salvar(); }
+  async removerProva(id) { delete this.d.provas[id]; this.salvar(); }
+  async salvarParceiro(p) { this.d.parceiros[`p-${Date.now()}`] = validarParceiro(p); this.salvar(); }
+  async removerParceiro(id) { delete this.d.parceiros[id]; this.salvar(); }
+}
+
+function validarParceiro(p) {
+  const nome = String(p.nome || "").trim();
+  if (nome.length < 2 || nome.length > 80) throw new Error("Nome do parceiro: de 2 a 80 caracteres.");
+  if (!CATEGORIAS[p.categoria]) throw new Error("Escolha a categoria.");
+  if (p.regiao && !REGIOES.includes(p.regiao)) throw new Error("Região inválida.");
+  const site = String(p.site || "").trim();
+  if (site && !/^https?:\/\/\S+$/i.test(site)) throw new Error("O site deve começar com http:// ou https://.");
+  return {
+    nome, categoria: p.categoria, regiao: p.regiao || "", cidade: String(p.cidade || "").trim().slice(0, 60) || CIDADE,
+    descricao: String(p.descricao || "").trim().slice(0, 240), site, instagram: String(p.instagram || "").trim().replace(/^@/, "").slice(0, 30),
+    whatsapp: String(p.whatsapp || "").replace(/\D/g, "").slice(0, 13),
+  };
+}
+
+// Valida o calendario.json gerado pelo coletor antes de publicar (o admin pode subir um arquivo errado).
+function validarCalendario(json, soConferidas) {
+  if (!json || !Array.isArray(json.provas)) throw new Error("Arquivo sem a lista 'provas'. Use o calendario.json do coletor.");
+  const ok = [];
+  for (const p of json.provas) {
+    if (!p || typeof p.nome !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(p.data || "")) continue;
+    if (soConferidas && !p.conferido) continue;
+    const link = typeof p.link_inscricao === "string" && /^https?:\/\/\S+$/i.test(p.link_inscricao) ? p.link_inscricao : null;
+    const fonteUrl = typeof p.fonte?.url === "string" && /^https?:\/\/\S+$/i.test(p.fonte.url) ? p.fonte.url : null;
+    const texto = (v, n) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
+    ok.push({
+      id: (typeof p.id === "string" && /^[a-z0-9-]{3,90}$/.test(p.id) ? p.id : `${p.data}-${slug(p.nome)}`),
+      nome: p.nome.slice(0, 200), data: p.data, horario: texto(p.horario, 5), local: texto(p.local, 200),
+      regiao: texto(p.regiao, 40), regioes: (p.regioes || []).filter((r) => REGIOES.includes(r)),
+      distancias: (p.distancias || []).filter((d) => typeof d === "string").slice(0, 8).map((d) => d.slice(0, 30)),
+      organizador: texto(p.organizador, 120), plataforma: texto(p.plataforma, 80), preco: texto(p.preco, 120), porte: texto(p.porte, 120),
+      link_inscricao: link, fonte: { nome: texto(p.fonte?.nome, 80) || "", url: fonteUrl, coletado_em: texto(p.fonte?.coletado_em, 10) || "" },
+      tags: (p.tags || []).filter((t) => t === "tematica" || t === "noturna"), conferido: Boolean(p.conferido),
+    });
+  }
+  return ok;
+}
+
+class StoreFirebase {
+  constructor(config) {
+    this.demo = false;
+    this.config = config;
+    this.user = null;
+  }
+  hoje() { return hojeISO(); }
+  async carregarSdk() {
+    const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSAO}/`;
+    const [app, auth, fs] = await Promise.all([import(`${base}firebase-app.js`), import(`${base}firebase-auth.js`), import(`${base}firebase-firestore.js`)]);
+    this.A = auth;
+    this.F = fs;
+    const instancia = app.initializeApp(this.config);
+    this.auth = auth.getAuth(instancia);
+    this.db = fs.getFirestore(instancia);
+  }
+  async iniciar(aoMudar) {
+    await this.carregarSdk();
+    try { await this.A.getRedirectResult(this.auth); } catch { /* sem redirecionamento pendente */ }
+    this.A.onAuthStateChanged(this.auth, (u) => {
+      this.user = u;
+      aoMudar(u ? { uid: u.uid, email: u.email, nome: u.displayName || "", foto: u.photoURL || null } : null);
+    });
+  }
+  async entrar() {
+    const provedor = new this.A.GoogleAuthProvider();
+    try {
+      await this.A.signInWithPopup(this.auth, provedor);
+    } catch (erro) {
+      // Celular com pop-up bloqueado: tenta pelo redirecionamento.
+      if (erro.code === "auth/popup-blocked" || erro.code === "auth/operation-not-supported-in-this-environment") {
+        await this.A.signInWithRedirect(this.auth, provedor);
+      } else if (erro.code !== "auth/popup-closed-by-user" && erro.code !== "auth/cancelled-popup-request") {
+        throw new Error(erro.code === "auth/unauthorized-domain"
+          ? "Este endereço não está autorizado no Firebase (Authentication > Configurações > Domínios autorizados)."
+          : "Não foi possível entrar com o Google. Tente de novo.");
+      }
+    }
+  }
+  async sair() { await this.A.signOut(this.auth); }
+  get uid() { return this.user?.uid; }
+
+  // atalhos
+  col(n) { return this.F.collection(this.db, n); }
+  ref(n, id) { return this.F.doc(this.db, n, id); }
+  async lista(q) { return (await this.F.getDocs(q)).docs.map((d) => ({ id: d.id, ...d.data() })); }
+  async emPartes(colecao, campo, valores, extras = []) {
+    const { query, where } = this.F;
+    const saida = [];
+    for (let i = 0; i < valores.length; i += LIMITE_IN) {
+      saida.push(...(await this.lista(query(this.col(colecao), where(campo, "in", valores.slice(i, i + LIMITE_IN)), ...extras))));
+    }
+    return saida;
+  }
+
+  async perfil(uid) {
+    const s = await this.F.getDoc(this.ref("usuarios", uid));
+    return s.exists() ? { uid, ...s.data() } : null;
+  }
+  async salvarPerfil(dados) {
+    await this.F.setDoc(this.ref("usuarios", this.uid), { ...validarPerfil(dados), atualizadoEm: new Date().toISOString() });
+  }
+  async usuarios(uids) {
+    const m = {};
+    await Promise.all([...new Set(uids)].map(async (u) => { const p = await this.perfil(u).catch(() => null); if (p) m[u] = p; }));
+    return m;
+  }
+  async buscarUsuarios(texto) {
+    const { query, where, limit } = this.F;
+    const t = normalizar(texto).replace(/^@/, "");
+    if (t.length < 2) return [];
+    const [porNome, porHandle] = await Promise.all([
+      this.lista(query(this.col("usuarios"), where("nomeBusca", ">=", t), where("nomeBusca", "<=", t + ""), limit(20))),
+      this.lista(query(this.col("usuarios"), where("handle", "==", t.replace(/ /g, "")), limit(5))),
+    ]);
+    const m = new Map([...porHandle, ...porNome].map((p) => [p.id, { uid: p.id, ...p }]));
+    m.delete(this.uid);
+    return [...m.values()];
+  }
+
+  async provas() {
+    const { query, where, orderBy } = this.F;
+    return this.lista(query(this.col("provas"), where("data", ">=", this.hoje()), orderBy("data")));
+  }
+  async confirmacoes() {
+    const { query, where } = this.F;
+    return this.lista(query(this.col("confirmacoes"), where("data", ">=", this.hoje())));
+  }
+  async confirmar(prova, sim, nome) {
+    const r = this.ref("confirmacoes", `${prova.id}_${this.uid}`);
+    if (sim) await this.F.setDoc(r, { provaId: prova.id, uid: this.uid, nome, data: prova.data, em: new Date().toISOString() });
+    else await this.F.deleteDoc(r);
+  }
+
+  async seguindo() {
+    const { query, where } = this.F;
+    return (await this.lista(query(this.col("follows"), where("seguidor", "==", this.uid)))).map((f) => f.alvo);
+  }
+  async seguidores(uid) {
+    const { query, where, getCountFromServer } = this.F;
+    return (await getCountFromServer(query(this.col("follows"), where("alvo", "==", uid)))).data().count;
+  }
+  async seguir(alvo, sim) {
+    const r = this.ref("follows", `${this.uid}_${alvo}`);
+    if (sim) await this.F.setDoc(r, { seguidor: this.uid, alvo, em: new Date().toISOString() });
+    else await this.F.deleteDoc(r);
+  }
+  async feed(uids) {
+    if (!uids.length) return [];
+    const { orderBy, limit } = this.F;
+    const [conf, tr] = await Promise.all([
+      this.emPartes("confirmacoes", "uid", uids, [orderBy("em", "desc"), limit(40)]),
+      this.emPartes("treinos", "uid", uids, [orderBy("em", "desc"), limit(40)]),
+    ]);
+    return [...conf.map((c) => ({ tipo: "confirmacao", ...c })), ...tr.map((t) => ({ tipo: "treino", ...t }))]
+      .sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
+  }
+
+  async treinos(uid) {
+    const { query, where, orderBy, limit } = this.F;
+    return this.lista(query(this.col("treinos"), where("uid", "==", uid), orderBy("data", "desc"), limit(400)));
+  }
+  async adicionarTreino(t, nome) {
+    await this.F.addDoc(this.col("treinos"), { ...validarTreino(t), uid: this.uid, nome, em: new Date().toISOString() });
+  }
+  async removerTreino(id) { await this.F.deleteDoc(this.ref("treinos", id)); }
+  async treinosDe(uids, desde) {
+    if (!uids.length) return [];
+    return this.emPartes("treinos", "uid", uids, [this.F.where("data", ">=", desde)]);
+  }
+
+  async meusGrupos() {
+    const { query, where } = this.F;
+    return this.lista(query(this.col("grupos"), where("membros", "array-contains", this.uid)));
+  }
+  async criarGrupo(nome) {
+    const n = String(nome || "").trim();
+    if (n.length < 3 || n.length > 40) throw new Error("O nome do grupo deve ter de 3 a 40 caracteres.");
+    const g = { nome: n, codigo: codigoNovo(), dono: this.uid, membros: [this.uid], criadoEm: new Date().toISOString() };
+    const r = await this.F.addDoc(this.col("grupos"), g);
+    return { id: r.id, ...g };
+  }
+  async entrarGrupo(codigo) {
+    const { query, where, limit, updateDoc, arrayUnion } = this.F;
+    const c = String(codigo || "").trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(c)) throw new Error("O código tem 6 letras ou números.");
+    const [g] = await this.lista(query(this.col("grupos"), where("codigo", "==", c), limit(1)));
+    if (!g) throw new Error("Nenhum grupo com esse código.");
+    if (g.membros.includes(this.uid)) throw new Error("Você já está nesse grupo.");
+    if (g.membros.length >= LIMITE_IN) throw new Error(`O grupo já tem ${LIMITE_IN} pessoas (limite do piloto).`);
+    await updateDoc(this.ref("grupos", g.id), { membros: arrayUnion(this.uid) });
+    return g;
+  }
+  async sairGrupo(id) {
+    const g = await this.F.getDoc(this.ref("grupos", id));
+    if (!g.exists()) return;
+    if (g.data().dono === this.uid) await this.F.deleteDoc(this.ref("grupos", id));
+    else await this.F.updateDoc(this.ref("grupos", id), { membros: this.F.arrayRemove(this.uid) });
+  }
+
+  async parceiros() { return this.lista(this.col("parceiros")); }
+
+  async ehAdmin() {
+    try {
+      const s = await this.F.getDoc(this.ref("config", "admins"));
+      const emails = s.exists() ? s.data().emails || [] : [];
+      return Boolean(this.user?.email && emails.includes(this.user.email));
+    } catch { return false; }
+  }
+  async importarProvas(lista) {
+    // Em lotes de 400 (limite de 500 operações por lote). merge: não apaga o "destaque" já marcado.
+    for (let i = 0; i < lista.length; i += 400) {
+      const lote = this.F.writeBatch(this.db);
+      for (const p of lista.slice(i, i + 400)) {
+        const { id, ...dados } = p;
+        lote.set(this.ref("provas", id), { ...dados, atualizadoEm: new Date().toISOString() }, { merge: true });
+      }
+      await lote.commit();
+    }
+  }
+  async todasProvas() { return this.lista(this.F.query(this.col("provas"), this.F.orderBy("data"))); }
+  async destacar(id, sim) { await this.F.updateDoc(this.ref("provas", id), { destaque: sim }); }
+  async removerProva(id) { await this.F.deleteDoc(this.ref("provas", id)); }
+  async salvarParceiro(p) { await this.F.addDoc(this.col("parceiros"), validarParceiro(p)); }
+  async removerParceiro(id) { await this.F.deleteDoc(this.ref("parceiros", id)); }
+}
+
+// ============================================================================
+//  ESTADO E TELAS
+// ============================================================================
+const estado = {
+  store: null, demo: false, usuario: null, perfil: null, admin: false,
+  aba: "provas", provas: [], confirmacoes: [], seguindo: [], pessoas: {},
+  filtros: { regioes: null, distancias: new Set(), tematica: false, noturna: false, amigos: false },
+};
+
+function preferencias() {
+  try { return JSON.parse(localStorage.getItem("corridax-filtros") || "null"); } catch { return null; }
+}
+function salvarPreferencias() {
+  try {
+    const f = estado.filtros;
+    localStorage.setItem("corridax-filtros", JSON.stringify({ regioes: f.regioes ? [...f.regioes] : null, distancias: [...f.distancias], tematica: f.tematica, noturna: f.noturna }));
+  } catch { /* ignora */ }
+}
+
+function tela(...filhos) {
+  $("#conteudo").replaceChildren(...filhos.flat(Infinity).filter((f) => f != null && f !== false));
+  window.scrollTo(0, 0);
+}
+
+async function executar(botao, acao) {
+  const texto = botao?.textContent;
+  if (botao) { botao.disabled = true; botao.textContent = "Aguarde..."; }
+  try {
+    return await acao();
+  } catch (erro) {
+    console.error(erro);
+    toast(erro.message || "Algo deu errado. Tente de novo.");
+    return undefined;
+  } finally {
+    if (botao) { botao.disabled = false; botao.textContent = texto; }
+  }
+}
+
+function chipsAlternar(opcoes, ativo, aoClicar, rolagem = false) {
+  return el("div", { class: `chips${rolagem ? " rolagem" : ""}` },
+    opcoes.map(([valor, rotulo]) => el("button", { type: "button", "aria-pressed": String(ativo(valor)), onclick: () => aoClicar(valor) }, rotulo)));
+}
+
+// ---------- Login ----------
+function telaLogin(mensagem = "") {
+  $("#topo").hidden = true;
+  $("#abas").hidden = true;
+  const botao = el("button", { type: "button", class: estado.demo ? "btn btn--cheio" : "btn btn--google btn--cheio" },
+    estado.demo ? null : el("svg", { viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true" }),
+    estado.demo ? "Entrar na demonstração" : "Entrar com o Google");
+  if (botao.querySelector("svg")) botao.querySelector("svg").innerHTML = '<path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/>';
+  botao.addEventListener("click", () => executar(botao, () => estado.store.entrar()));
+  tela(
+    el("section", { class: "painel login" },
+      el("svg", { class: "logo", viewBox: "0 0 64 64", "aria-hidden": "true" }),
+      el("h2", {}, "Corrida X"),
+      el("p", { class: "dica" }, `Todas as corridas de rua de ${CIDADE} num lugar só, por região, com o link da inscrição.`),
+      el("ul", {},
+        el("li", {}, "Calendário por região, com as corridas temáticas e noturnas"),
+        el("li", {}, "Veja quais amigos vão em cada prova"),
+        el("li", {}, "Registre seus treinos e dispute o ranking do grupo"),
+        el("li", {}, "Nutricionistas, fisioterapeutas e assessorias da sua região")),
+      mensagem ? el("p", { class: "erro", role: "alert" }, mensagem) : null,
+      botao,
+      estado.demo ? el("p", { class: "aviso", style: "margin-top:12px" }, "Modo demonstração: dados de exemplo, guardados só neste navegador. Pessoas, parceiros e links são fictícios.") : null,
+      el("p", { class: "dica" }, "Ao entrar, seu nome, região, provas confirmadas e treinos ficam visíveis para outros corredores logados.")));
+  $(".login .logo").innerHTML = '<rect width="64" height="64" rx="14" fill="#0f6e56"/><path d="M20 20l24 24M44 20L20 44" stroke="#fff" stroke-width="7" stroke-linecap="round"/>';
+}
+
+// ---------- Perfil (também é o cadastro do primeiro acesso) ----------
+function telaPerfil(primeiraVez = false) {
+  const p = estado.perfil || { nome: estado.usuario?.nome || "", handle: "", regiao: "", distancias: [], instagram: "" };
+  const escolhidas = new Set(p.distancias || []);
+  const regiao = el("select", { id: "pf-regiao" }, el("option", { value: "" }, "Escolha..."),
+    REGIOES.map((r) => el("option", { value: r, selected: p.regiao === r }, NOME_REGIAO[r])));
+  const dist = el("div", { class: "chips" });
+  const renderDist = () => dist.replaceChildren(...DISTANCIAS.map((d) => el("button", {
+    type: "button", "aria-pressed": String(escolhidas.has(d.chave)),
+    onclick: () => { escolhidas.has(d.chave) ? escolhidas.delete(d.chave) : escolhidas.add(d.chave); renderDist(); },
+  }, d.nome)));
+  renderDist();
+  const erro = el("p", { class: "erro", role: "alert", hidden: true });
+  const salvar = el("button", { type: "submit", class: "btn btn--cheio" }, primeiraVez ? "Começar" : "Salvar perfil");
+  const form = el("form", { novalidate: true },
+    el("div", { class: "campo" }, el("label", { for: "pf-nome" }, "Nome"), el("input", { id: "pf-nome", type: "text", maxlength: "60", value: p.nome || "", autocomplete: "name" })),
+    el("div", { class: "grade grade--2" },
+      el("div", { class: "campo" }, el("label", { for: "pf-handle" }, "@usuário"), el("input", { id: "pf-handle", type: "text", maxlength: "21", value: p.handle || "", autocapitalize: "none", placeholder: "ex.: ana.corre" })),
+      el("div", { class: "campo" }, el("label", { for: "pf-regiao" }, "Onde você corre"), regiao)),
+    el("div", { class: "campo" }, el("span", { class: "rotulo" }, "Distâncias que você gosta"), dist),
+    el("div", { class: "campo" }, el("label", { for: "pf-insta" }, "Instagram (opcional)"), el("input", { id: "pf-insta", type: "text", maxlength: "31", value: p.instagram || "", autocapitalize: "none", placeholder: "@seuperfil" })),
+    erro, salvar);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    erro.hidden = true;
+    executar(salvar, async () => {
+      try {
+        const dados = { nome: $("#pf-nome").value, handle: $("#pf-handle").value, regiao: regiao.value, distancias: [...escolhidas], instagram: $("#pf-insta").value, foto: estado.usuario?.foto || p.foto || null };
+        validarPerfil(dados);
+        await estado.store.salvarPerfil(dados);
+      } catch (er) {
+        erro.textContent = er.message;
+        erro.hidden = false;
+        return;
+      }
+      estado.perfil = await estado.store.perfil(estado.store.uid);
+      if (primeiraVez || !estado.filtros.regioes) estado.filtros.regioes = new Set([estado.perfil.regiao]);
+      toast("Perfil salvo.");
+      atualizarTopo();
+      irPara("provas");
+    });
+  });
+
+  const acoes = primeiraVez ? null : el("div", { class: "painel" },
+    estado.admin ? el("button", { type: "button", class: "btn btn--sec btn--cheio", style: "margin-bottom:8px", onclick: () => telaAdmin() }, "Administração (provas e parceiros)") : null,
+    estado.demo ? el("button", { type: "button", class: "btn btn--sec btn--cheio", style: "margin-bottom:8px", onclick: async () => { estado.store.zerar(); location.reload(); } }, "Recomeçar a demonstração") : null,
+    el("button", { type: "button", class: "btn btn--perigo btn--cheio", onclick: (e) => executar(e.currentTarget, () => estado.store.sair()) }, "Sair"));
+
+  $("#topo").hidden = primeiraVez;
+  $("#abas").hidden = primeiraVez;
+  marcarAba(null);
+  tela(
+    primeiraVez ? null : el("button", { type: "button", class: "voltar", onclick: () => irPara("provas") }, "← Voltar"),
+    el("section", { class: "painel" },
+      el("h2", {}, primeiraVez ? "Bem-vindo! Monte seu perfil" : "Meu perfil"),
+      primeiraVez ? el("p", { class: "dica" }, "Usamos a sua região para mostrar primeiro as provas perto de você.") : null,
+      form),
+    acoes);
+}
+
+// ---------- Abas ----------
+function marcarAba(aba) {
+  for (const b of document.querySelectorAll("#abas button")) {
+    if (b.dataset.aba === aba) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  }
+}
+
+async function irPara(aba) {
+  estado.aba = aba;
+  $("#topo").hidden = false;
+  $("#abas").hidden = false;
+  marcarAba(aba);
+  const telas = { provas: telaProvas, atividade: telaAtividade, treinos: telaTreinos, grupos: telaGrupos, parceiros: telaParceiros };
+  tela(el("p", { class: "carregando" }, "Carregando..."));
+  try {
+    await telas[aba]();
+  } catch (erro) {
+    console.error(erro);
+    tela(el("p", { class: "erro" }, `Não foi possível carregar: ${erro.message || erro}`),
+      el("button", { type: "button", class: "btn btn--sec", onclick: () => irPara(aba) }, "Tentar de novo"));
+  }
+}
+
+function atualizarTopo() {
+  $("#topo-sub").textContent = estado.perfil ? `· ${NOME_REGIAO[estado.perfil.regiao] || CIDADE}${estado.demo ? " · demonstração" : ""}` : "";
+  $("#btn-perfil").replaceChildren(...avatar({ ...estado.perfil, foto: estado.usuario?.foto || estado.perfil?.foto }).childNodes);
+  if (!$("#btn-perfil").childNodes.length) $("#btn-perfil").textContent = iniciais(estado.perfil?.nome);
+}
+
+// ---------- Provas ----------
+async function carregarProvas() {
+  const [provas, confirmacoes, seguindo] = await Promise.all([estado.store.provas(), estado.store.confirmacoes(), estado.store.seguindo()]);
+  estado.provas = provas;
+  estado.confirmacoes = confirmacoes;
+  estado.seguindo = seguindo;
+}
+
+function passaFiltros(p) {
+  const f = estado.filtros;
+  if (f.regioes && f.regioes.size) {
+    const regioesDaProva = p.regioes?.length ? p.regioes : [];
+    if (!regioesDaProva.some((r) => f.regioes.has(r))) return false;
+  }
+  if (f.distancias.size) {
+    const kms = distanciasEmKm(p.distancias);
+    const faixas = DISTANCIAS.filter((d) => f.distancias.has(d.chave));
+    if (!kms.some((k) => faixas.some((d) => k >= d.min && k <= d.max))) return false;
+  }
+  const tags = etiquetas(p);
+  if (f.tematica && !tags.includes("tematica")) return false;
+  if (f.noturna && !tags.includes("noturna")) return false;
+  if (f.amigos) {
+    const amigos = new Set(estado.seguindo);
+    if (!estado.confirmacoes.some((c) => c.provaId === p.id && amigos.has(c.uid))) return false;
+  }
+  return true;
+}
+
+function cartaoProva(p) {
+  const meuUid = estado.store.uid;
+  const daProva = estado.confirmacoes.filter((c) => c.provaId === p.id);
+  const vou = daProva.some((c) => c.uid === meuUid);
+  const amigos = new Set(estado.seguindo);
+  const amigosVao = daProva.filter((c) => amigos.has(c.uid));
+  const tags = etiquetas(p);
+  const botaoVou = el("button", { type: "button", class: "btn-vou", "aria-pressed": String(vou) }, vou ? "✓ Vou correr" : "Vou correr");
+  botaoVou.addEventListener("click", () => executar(null, async () => {
+    await estado.store.confirmar(p, !vou, estado.perfil.nome);
+    estado.confirmacoes = await estado.store.confirmacoes();
+    toast(vou ? "Presença retirada." : "Presença confirmada! Seus amigos vão ver.");
+    renderListaProvas();
+  }));
+  const outros = daProva.length - amigosVao.length - (vou ? 1 : 0);
+  const quem = el("div", { class: "quem" },
+    amigosVao.length ? el("span", { class: "pilha" }, amigosVao.slice(0, 3).map((c) => avatar({ nome: c.nome }, true))) : null,
+    el("span", {}, amigosVao.length
+      ? `${nomesCurtos(amigosVao)} ${amigosVao.length === 1 ? "vai" : "vão"}${outros > 0 ? ` · +${outros}` : ""}`
+      : daProva.length ? `${daProva.length} ${daProva.length === 1 ? "confirmado" : "confirmados"}` : "Seja o primeiro a confirmar"));
+
+  return el("li", { class: `cartao${p.destaque ? " cartao--gold" : ""}` },
+    el("div", { class: "cartao-cab" },
+      el("div", {}, el("div", { class: "cartao-nome" }, p.nome),
+        el("div", { class: "meta" }, [p.horario, p.local || "local a confirmar", p.regiao].filter(Boolean).join(" · "))),
+      p.destaque ? el("span", { class: "selo selo--gold" }, "destaque") : null),
+    (tags.length || p.distancias?.length) ? el("div", { class: "etiquetas" },
+      tags.includes("tematica") ? el("span", { class: "selo selo--tema" }, "temática") : null,
+      tags.includes("noturna") ? el("span", { class: "selo selo--noite" }, "noturna") : null,
+      (p.distancias || []).map((d) => el("span", { class: "selo" }, d))) : null,
+    (p.organizador || p.preco) ? el("div", { class: "meta" }, [p.organizador ? `Organização: ${p.organizador}` : null, p.preco].filter(Boolean).join(" · ")) : null,
+    el("div", { class: "cartao-rodape" }, botaoVou, quem),
+    el("div", { class: "links" },
+      linkSeguro(p.link_inscricao, `Fazer inscrição${p.plataforma ? ` (${p.plataforma})` : ""}`),
+      linkSeguro(p.fonte?.url, "Fonte")),
+    p.conferido === false ? el("p", { class: "dica" }, "Dados ainda não conferidos com o organizador.") : null);
+}
+
+function blocoProxima() {
+  const meuUid = estado.store.uid;
+  const minhas = new Set(estado.confirmacoes.filter((c) => c.uid === meuUid).map((c) => c.provaId));
+  const proxima = estado.provas.find((p) => minhas.has(p.id));
+  if (!proxima) return null;
+  const dias = diasAte(proxima.data, estado.store.hoje());
+  return el("div", { class: "proxima" },
+    el("div", { class: "contagem" }, dias <= 0 ? "Hoje" : String(dias), dias > 0 ? el("small", {}, dias === 1 ? "dia" : "dias") : null),
+    el("div", {}, el("small", {}, "Sua próxima prova"), el("b", {}, proxima.nome), el("small", {}, `${dataLonga(proxima.data)}${proxima.horario ? ` · ${proxima.horario}` : ""}`)));
+}
+
+function renderListaProvas() {
+  const caixa = $("#lista-provas");
+  if (!caixa) return;
+  const visiveis = estado.provas.filter(passaFiltros);
+  const destaques = visiveis.filter((p) => p.destaque);
+  const partes = [];
+  const prox = blocoProxima();
+  if (prox) partes.push(prox);
+  if (destaques.length) partes.push(el("h3", { class: "dia" }, "Em destaque"), el("ul", { class: "lista" }, destaques.map(cartaoProva)));
+  const porDia = new Map();
+  for (const p of visiveis.filter((x) => !x.destaque)) { // as em destaque já aparecem no topo
+    if (!porDia.has(p.data)) porDia.set(p.data, []);
+    porDia.get(p.data).push(p);
+  }
+  for (const [dia, provas] of porDia) {
+    const dias = diasAte(dia, estado.store.hoje());
+    partes.push(el("h3", { class: "dia" }, `${dataLonga(dia)}${dias === 0 ? " · hoje" : dias === 1 ? " · amanhã" : ""}`),
+      el("ul", { class: "lista" }, provas.sort((a, b) => (a.horario || "99").localeCompare(b.horario || "99")).map(cartaoProva)));
+  }
+  if (!visiveis.length) {
+    partes.push(el("p", { class: "vazio" }, estado.provas.length ? "Nenhuma prova com esses filtros. Tente outra região ou tire um filtro." : "Ainda não há provas publicadas."));
+  }
+  caixa.replaceChildren(...partes);
+}
+
+async function telaProvas() {
+  await carregarProvas();
+  const f = estado.filtros;
+  const caixaFiltros = el("div", { class: "filtros" });
+  const renderFiltros = () => {
+    caixaFiltros.replaceChildren(
+      chipsAlternar([["todas", "Todas"], ...REGIOES.map((r) => [r, NOME_REGIAO[r]])],
+        (v) => (v === "todas" ? !f.regioes || !f.regioes.size : f.regioes?.has(v)),
+        (v) => {
+          if (v === "todas") f.regioes = new Set();
+          else {
+            f.regioes = new Set(f.regioes || []);
+            f.regioes.has(v) ? f.regioes.delete(v) : f.regioes.add(v);
+          }
+          aplicar();
+        }, true),
+      chipsAlternar([...DISTANCIAS.map((d) => [d.chave, d.nome]), ["tematica", "🎭 Temáticas"], ["noturna", "🌙 Noturnas"], ["amigos", "Onde amigos vão"]],
+        (v) => (v === "tematica" ? f.tematica : v === "noturna" ? f.noturna : v === "amigos" ? f.amigos : f.distancias.has(v)),
+        (v) => {
+          if (v === "tematica") f.tematica = !f.tematica;
+          else if (v === "noturna") f.noturna = !f.noturna;
+          else if (v === "amigos") f.amigos = !f.amigos;
+          else f.distancias.has(v) ? f.distancias.delete(v) : f.distancias.add(v);
+          aplicar();
+        }, true));
+  };
+  const aplicar = () => { salvarPreferencias(); renderFiltros(); renderListaProvas(); };
+  renderFiltros();
+  tela(
+    estado.demo ? el("p", { class: "aviso" }, "Demonstração: provas da amostra do projeto piloto (links fictícios). A data de hoje está fixa em 15/10/2026.") : null,
+    caixaFiltros,
+    el("div", { id: "lista-provas" }));
+  renderListaProvas();
+}
+
+// ---------- Amigos e atividade ----------
+async function telaAtividade() {
+  const seguindo = await estado.store.seguindo();
+  estado.seguindo = seguindo;
+  const [pessoas, feed, nSeguidores] = await Promise.all([
+    estado.store.usuarios(seguindo), estado.store.feed(seguindo), estado.store.seguidores(estado.store.uid),
+  ]);
+  const provasPorId = Object.fromEntries((estado.provas.length ? estado.provas : await estado.store.provas()).map((p) => [p.id, p]));
+
+  const resultados = el("div", {});
+  const busca = el("input", { type: "search", placeholder: "Buscar por nome ou @usuário", "aria-label": "Buscar corredores", enterkeyhint: "search" });
+  let temporizador;
+  busca.addEventListener("input", () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(async () => {
+      const lista = await estado.store.buscarUsuarios(busca.value).catch(() => []);
+      resultados.replaceChildren(...(busca.value.trim().length < 2 ? [] : lista.length ? lista.map((p) => linhaPessoa(p)) : [el("p", { class: "dica" }, "Ninguém encontrado.")]));
+    }, 300);
+  });
+
+  function linhaPessoa(p) {
+    const sigo = estado.seguindo.includes(p.uid);
+    const botao = el("button", { type: "button", class: `btn btn--sm ${sigo ? "btn--sec" : ""}` }, sigo ? "Seguindo" : "Seguir");
+    botao.addEventListener("click", () => executar(botao, async () => {
+      await estado.store.seguir(p.uid, !sigo);
+      toast(sigo ? `Você deixou de seguir ${p.nome.split(" ")[0]}.` : `Agora você segue ${p.nome.split(" ")[0]}.`);
+      irPara("atividade");
+    }));
+    return el("div", { class: "pessoa" }, avatar(p),
+      el("div", { class: "info" }, el("b", {}, p.nome), el("span", {}, [`@${p.handle}`, NOME_REGIAO[p.regiao]].filter(Boolean).join(" · "))),
+      linkInsta(p.instagram), botao);
+  }
+
+  const eventos = feed.map((e) => {
+    const quem = pessoas[e.uid] || { nome: e.nome };
+    let texto;
+    if (e.tipo === "confirmacao") {
+      const prova = provasPorId[e.provaId];
+      texto = [el("b", {}, quem.nome.split(" ")[0]), ` vai correr ${prova ? prova.nome : "uma prova"}`, prova ? ` (${dataBR(prova.data)})` : ""];
+    } else {
+      texto = [el("b", {}, quem.nome.split(" ")[0]), ` correu ${km(e.km)}`, e.minutos ? ` em ${e.minutos} min` : "", e.descricao ? ` · ${e.descricao}` : ""];
+    }
+    return el("div", { class: "evento" }, avatar(quem, true), el("div", {}, ...texto, el("span", { class: "quando" }, e.tipo === "treino" ? dataBR(e.data) : quandoRelativo(e.em))));
+  });
+
+  tela(
+    el("section", { class: "painel" }, el("h2", {}, "Encontrar corredores"), busca, resultados),
+    el("section", { class: "painel" },
+      el("h2", {}, "Atividade dos amigos"),
+      eventos.length ? eventos : el("p", { class: "vazio" }, seguindo.length ? "Seus amigos ainda não confirmaram provas nem lançaram treinos." : "Siga alguém para ver aqui as provas e os treinos dessa pessoa.")),
+    el("section", { class: "painel" },
+      el("h2", {}, `Seguindo (${seguindo.length}) · ${nSeguidores} ${nSeguidores === 1 ? "seguidor" : "seguidores"}`),
+      seguindo.length ? Object.values(pessoas).map((p) => linhaPessoa(p)) : el("p", { class: "dica" }, "Você ainda não segue ninguém.")));
+}
+
+// ---------- Treinos ----------
+async function telaTreinos() {
+  const lista = await estado.store.treinos(estado.store.uid);
+  const hoje = estado.store.hoje();
+  const mes = hoje.slice(0, 7), ano = hoje.slice(0, 4);
+  const soma = (f) => lista.filter(f).reduce((s, t) => s + t.km, 0);
+  const minhasProvas = (estado.confirmacoes.length ? estado.confirmacoes : await estado.store.confirmacoes()).filter((c) => c.uid === estado.store.uid).length;
+
+  const erro = el("p", { class: "erro", role: "alert", hidden: true });
+  const campos = {
+    data: el("input", { id: "tr-data", type: "date", value: hoje, max: hoje }),
+    km: el("input", { id: "tr-km", type: "text", inputmode: "decimal", placeholder: "ex.: 8,5" }),
+    minutos: el("input", { id: "tr-min", type: "number", inputmode: "numeric", min: "1", placeholder: "opcional" }),
+    descricao: el("input", { id: "tr-desc", type: "text", maxlength: "120", placeholder: "ex.: Longão no Ibirapuera" }),
+  };
+  let origem = "manual";
+  const gpx = el("input", { type: "file", accept: ".gpx,application/gpx+xml,application/xml", "aria-label": "Importar arquivo GPX" });
+  gpx.addEventListener("change", async () => {
+    const arquivo = gpx.files[0];
+    if (!arquivo) return;
+    try {
+      if (arquivo.size > 15 * 1024 * 1024) throw new Error("Arquivo muito grande (máx. 15 MB).");
+      const r = lerGpx(await arquivo.text());
+      campos.km.value = String(r.km).replace(".", ",");
+      if (r.minutos) campos.minutos.value = String(r.minutos);
+      if (r.data) campos.data.value = r.data;
+      if (r.nome && !campos.descricao.value) campos.descricao.value = r.nome.slice(0, 120);
+      origem = "gpx";
+      toast(`GPX lido: ${km(r.km)}. Confira e salve.`);
+    } catch (e) {
+      erro.textContent = e.message;
+      erro.hidden = false;
+    }
+  });
+  const salvar = el("button", { type: "submit", class: "btn btn--cheio" }, "Salvar treino");
+  const form = el("form", { novalidate: true },
+    el("div", { class: "grade" },
+      el("div", { class: "campo" }, el("label", { for: "tr-data" }, "Data"), campos.data),
+      el("div", { class: "campo" }, el("label", { for: "tr-km" }, "Distância (km)"), campos.km),
+      el("div", { class: "campo" }, el("label", { for: "tr-min" }, "Tempo (min)"), campos.minutos)),
+    el("div", { class: "campo" }, el("label", { for: "tr-desc" }, "Descrição"), campos.descricao),
+    el("details", { class: "mais" }, el("summary", {}, "Importar de um arquivo GPX (relógio, Strava)"),
+      el("p", { class: "dica" }, "No Strava: abra a atividade › ⋯ › Exportar GPX. No relógio, use o app do fabricante. O arquivo é lido aqui no aparelho; só a distância, o tempo e a data são salvos."),
+      gpx),
+    erro, salvar);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    erro.hidden = true;
+    executar(salvar, async () => {
+      try {
+        await estado.store.adicionarTreino({ data: campos.data.value, km: campos.km.value, minutos: campos.minutos.value, descricao: campos.descricao.value, origem }, estado.perfil.nome);
+      } catch (er) {
+        erro.textContent = er.message;
+        erro.hidden = false;
+        return;
+      }
+      toast("Treino salvo!");
+      irPara("treinos");
+    });
+  });
+
+  const itens = lista.slice(0, 60).map((t) => {
+    const remover = el("button", { type: "button", class: "btn btn--sm btn--sec", "aria-label": `Apagar treino de ${dataBR(t.data)}` }, "Apagar");
+    remover.addEventListener("click", () => executar(remover, async () => { await estado.store.removerTreino(t.id); irPara("treinos"); }));
+    const ritmo = t.minutos ? `${Math.floor(t.minutos / t.km)}:${String(Math.round(((t.minutos / t.km) % 1) * 60)).padStart(2, "0")} /km` : null;
+    return el("div", { class: "pessoa" },
+      el("div", { class: "info" }, el("b", {}, km(t.km)), el("span", {}, [dataBR(t.data), t.minutos ? `${t.minutos} min` : null, ritmo, t.descricao, t.origem === "gpx" ? "GPX" : null].filter(Boolean).join(" · "))),
+      remover);
+  });
+
+  tela(
+    el("div", { class: "numeros" },
+      el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(mes)))), el("span", {}, "neste mês")),
+      el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(ano)))), el("span", {}, `em ${ano}`)),
+      el("div", { class: "numero" }, el("b", {}, String(lista.filter((t) => t.data.startsWith(ano)).length)), el("span", {}, `treinos em ${ano}`)),
+      el("div", { class: "numero" }, el("b", {}, String(minhasProvas)), el("span", {}, "provas confirmadas"))),
+    el("section", { class: "painel" }, el("h2", {}, "Lançar treino"), form),
+    el("section", { class: "painel" }, el("h2", {}, "Histórico"), itens.length ? itens : el("p", { class: "vazio" }, "Nenhum treino ainda. Lance o primeiro acima.")));
+}
+
+// ---------- Grupos e ranking ----------
+async function telaGrupos() {
+  const grupos = await estado.store.meusGrupos();
+  const hoje = estado.store.hoje();
+  const nome = el("input", { type: "text", maxlength: "40", placeholder: "ex.: Turma do Ibirapuera", "aria-label": "Nome do grupo" });
+  const codigo = el("input", { type: "text", maxlength: "6", placeholder: "ABC123", autocapitalize: "characters", "aria-label": "Código do grupo" });
+  const criar = el("button", { type: "button", class: "btn" }, "Criar");
+  const entrar = el("button", { type: "button", class: "btn" }, "Entrar");
+  criar.addEventListener("click", () => executar(criar, async () => {
+    const g = await estado.store.criarGrupo(nome.value);
+    toast(`Grupo criado! Código: ${g.codigo}`);
+    irPara("grupos");
+  }));
+  entrar.addEventListener("click", () => executar(entrar, async () => {
+    const g = await estado.store.entrarGrupo(codigo.value);
+    toast(`Você entrou em ${g.nome}.`);
+    irPara("grupos");
+  }));
+
+  const cartoes = [];
+  for (const g of grupos) {
+    let periodo = "mes";
+    const corpo = el("div", {});
+    const membros = await estado.store.usuarios(g.membros);
+    const renderRanking = async () => {
+      const desde = periodo === "mes" ? `${hoje.slice(0, 7)}-01` : `${hoje.slice(0, 4)}-01-01`;
+      const treinos = await estado.store.treinosDe(g.membros, desde);
+      const linhas = g.membros.map((u) => {
+        const meus = treinos.filter((t) => t.uid === u && t.data <= hoje);
+        return { uid: u, nome: membros[u]?.nome || "Corredor", km: meus.reduce((s, t) => s + t.km, 0), n: meus.length };
+      }).sort((a, b) => b.km - a.km);
+      corpo.replaceChildren(
+        chipsAlternar([["mes", "Este mês"], ["ano", `Ano de ${hoje.slice(0, 4)}`]], (v) => v === periodo, (v) => { periodo = v; renderRanking(); }),
+        el("table", { class: "ranking", style: "margin-top:8px" },
+          el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", {}, "Corredor"), el("th", { class: "num" }, "Treinos"), el("th", { class: "num" }, "Km"))),
+          el("tbody", {}, linhas.map((l, i) => el("tr", { class: l.uid === estado.store.uid ? "eu" : null },
+            el("td", {}, i === 0 && l.km > 0 ? "🥇" : i === 1 && l.km > 0 ? "🥈" : i === 2 && l.km > 0 ? "🥉" : String(i + 1)),
+            el("td", {}, l.nome), el("td", { class: "num" }, String(l.n)), el("td", { class: "num" }, km(l.km)))))));
+    };
+    await renderRanking();
+    const sair = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, g.dono === estado.store.uid ? "Apagar grupo" : "Sair do grupo");
+    sair.addEventListener("click", () => {
+      if (!confirmarAcao(sair, g.dono === estado.store.uid ? "Toque de novo para apagar" : "Toque de novo para sair")) return;
+      executar(sair, async () => { await estado.store.sairGrupo(g.id); irPara("grupos"); });
+    });
+    const compartilhar = el("button", { type: "button", class: "btn btn--sm btn--sec" }, "Convidar");
+    compartilhar.addEventListener("click", async () => {
+      const texto = `Entra no meu grupo "${g.nome}" no Corrida X! Código: ${g.codigo}`;
+      try {
+        if (navigator.share) await navigator.share({ text: texto });
+        else { await navigator.clipboard.writeText(texto); toast("Convite copiado."); }
+      } catch { /* compartilhamento cancelado */ }
+    });
+    cartoes.push(el("section", { class: "painel" },
+      el("div", { class: "cartao-cab" }, el("div", {}, el("h2", { style: "margin:0" }, g.nome),
+        el("div", { class: "meta" }, `${g.membros.length} ${g.membros.length === 1 ? "membro" : "membros"} · código `, el("span", { class: "codigo" }, g.codigo))),
+        el("div", { class: "linha" }, compartilhar, sair)),
+      corpo));
+  }
+
+  tela(
+    ...cartoes,
+    grupos.length ? null : el("p", { class: "vazio" }, "Crie um grupo com os amigos da corrida e disputem quem corre mais no mês."),
+    el("section", { class: "painel" },
+      el("h2", {}, "Novo grupo"), el("div", { class: "linha" }, nome, criar),
+      el("h3", {}, "Entrar com um código"), el("div", { class: "linha" }, codigo, entrar),
+      el("p", { class: "dica" }, `O ranking soma os treinos lançados por cada membro. Até ${LIMITE_IN} pessoas por grupo no piloto.`)));
+}
+
+// Pede um segundo toque para ações destrutivas (sem confirm(), que bloqueia a página).
+function confirmarAcao(botao, texto) {
+  if (botao.dataset.confirmando === "1") return true;
+  botao.dataset.confirmando = "1";
+  const original = botao.textContent;
+  botao.textContent = texto;
+  setTimeout(() => { botao.dataset.confirmando = ""; botao.textContent = original; }, 3500);
+  return false;
+}
+
+// ---------- Parceiros ----------
+async function telaParceiros() {
+  const todos = await estado.store.parceiros();
+  let categoria = "todas";
+  let soRegiao = Boolean(estado.perfil?.regiao);
+  const caixa = el("div", {});
+  const render = () => {
+    const lista = todos.filter((p) => (categoria === "todas" || p.categoria === categoria) && (!soRegiao || !p.regiao || p.regiao === estado.perfil.regiao));
+    caixa.replaceChildren(
+      chipsAlternar([["todas", "Todos"], ...Object.entries(CATEGORIAS)], (v) => v === categoria, (v) => { categoria = v; render(); }, true),
+      el("label", { class: "opcao" }, Object.assign(el("input", { type: "checkbox", onchange: (e) => { soRegiao = e.target.checked; render(); } }), { checked: soRegiao }),
+        `Só da minha região (${NOME_REGIAO[estado.perfil?.regiao] || "—"}) e atendimento online`),
+      lista.length ? el("ul", { class: "lista" }, lista.map((p) => el("li", { class: "cartao" },
+        el("div", { class: "cartao-cab" }, el("div", {}, el("div", { class: "cartao-nome" }, p.nome),
+          el("div", { class: "meta" }, [CATEGORIAS[p.categoria], NOME_REGIAO[p.regiao], p.cidade].filter(Boolean).join(" · ")))),
+        p.descricao ? el("p", { class: "meta", style: "color:var(--text)" }, p.descricao) : null,
+        el("div", { class: "links" }, linkInsta(p.instagram), linkWhats(p.whatsapp, "WhatsApp"), linkSeguro(p.site, "Site")))))
+        : el("p", { class: "vazio" }, "Nenhum parceiro com esses filtros ainda."));
+  };
+  render();
+  tela(
+    el("p", { class: "dica" }, "Profissionais que atendem corredores: nutrição, fisioterapia, assessorias e treinadores."),
+    caixa,
+    el("section", { class: "painel", style: "margin-top:14px" }, el("h2", {}, "É profissional da corrida?"),
+      el("p", { class: "dica" }, "Fale com a gente para aparecer aqui para os corredores da sua região."),
+      /^(mailto:|https:\/\/)/.test(CONTATO_PARCEIROS)
+        ? el("a", { href: CONTATO_PARCEIROS, class: "btn btn--sec", style: "display:inline-block;text-decoration:none", target: "_blank", rel: "noopener noreferrer" }, "Quero ser parceiro")
+        : null));
+}
+
+// ---------- Administração ----------
+async function telaAdmin() {
+  if (!estado.admin) return irPara("provas");
+  marcarAba(null);
+  const [provas, confirmacoes, parceiros] = await Promise.all([estado.store.todasProvas(), estado.store.confirmacoes(), estado.store.parceiros()]);
+  const contagem = {};
+  for (const c of confirmacoes) contagem[c.provaId] = (contagem[c.provaId] || 0) + 1;
+
+  // Importar calendário do coletor
+  const arquivo = el("input", { type: "file", accept: ".json,application/json", "aria-label": "Arquivo calendario.json" });
+  const soConferidas = el("input", { type: "checkbox", checked: true });
+  const previa = el("p", { class: "dica" });
+  const publicar = el("button", { type: "button", class: "btn", disabled: true }, "Publicar no app");
+  let carregadas = [];
+  arquivo.addEventListener("change", async () => {
+    try {
+      const json = JSON.parse(await arquivo.files[0].text());
+      carregadas = validarCalendario(json, soConferidas.checked);
+      previa.textContent = `${carregadas.length} prova(s) prontas para publicar${json.gerado_em ? ` (coleta de ${dataBR(json.gerado_em)})` : ""}.`;
+      publicar.disabled = !carregadas.length;
+    } catch (e) {
+      previa.textContent = e.message || "Não foi possível ler o arquivo.";
+      publicar.disabled = true;
+    }
+  });
+  soConferidas.addEventListener("change", () => arquivo.dispatchEvent(new Event("change")));
+  publicar.addEventListener("click", () => executar(publicar, async () => {
+    await estado.store.importarProvas(carregadas);
+    toast(`${carregadas.length} prova(s) publicadas.`);
+    telaAdmin();
+  }));
+
+  // Lista de provas: destaque (plano gold), confirmações e remoção
+  const linhas = provas.map((p) => {
+    const destaque = el("button", { type: "button", class: `btn btn--sm ${p.destaque ? "" : "btn--sec"}` }, p.destaque ? "★ Destaque" : "☆ Destacar");
+    destaque.addEventListener("click", () => executar(destaque, async () => { await estado.store.destacar(p.id, !p.destaque); telaAdmin(); }));
+    const remover = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, "Remover");
+    remover.addEventListener("click", () => {
+      if (!confirmarAcao(remover, "Confirmar")) return;
+      executar(remover, async () => { await estado.store.removerProva(p.id); telaAdmin(); });
+    });
+    const n = contagem[p.id] || 0;
+    return el("div", { class: "pessoa", style: "flex-wrap:wrap" },
+      el("div", { class: "info" }, el("b", {}, p.nome),
+        el("span", {}, [dataBR(p.data), p.regiao, `${n} ${n === 1 ? "confirmado" : "confirmados"}`].filter(Boolean).join(" · "))),
+      el("div", { class: "linha" }, destaque, remover));
+  });
+  const exportar = el("button", { type: "button", class: "btn btn--sec btn--sm" }, "Baixar confirmações por prova (CSV)");
+  exportar.addEventListener("click", () => {
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = ["data;prova;organizador;confirmados;destaque", ...provas.map((p) => [dataBR(p.data), p.nome, p.organizador, contagem[p.id] || 0, p.destaque ? "sim" : "não"].map(esc).join(";"))].join("\r\n");
+    const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    const a = el("a", { href: url, download: "confirmacoes-corrida-x.csv" });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  });
+
+  // Parceiros
+  const pf = {
+    nome: el("input", { type: "text", maxlength: "80", id: "pa-nome" }),
+    categoria: el("select", { id: "pa-cat" }, Object.entries(CATEGORIAS).map(([v, n]) => el("option", { value: v }, n))),
+    regiao: el("select", { id: "pa-reg" }, el("option", { value: "" }, "Online / qualquer região"), REGIOES.map((r) => el("option", { value: r }, NOME_REGIAO[r]))),
+    cidade: el("input", { type: "text", maxlength: "60", id: "pa-cid", value: CIDADE }),
+    instagram: el("input", { type: "text", maxlength: "31", id: "pa-ig", placeholder: "@perfil" }),
+    whatsapp: el("input", { type: "text", maxlength: "20", id: "pa-wa", inputmode: "tel", placeholder: "(11) 90000-0000" }),
+    site: el("input", { type: "url", maxlength: "200", id: "pa-site", placeholder: "https://" }),
+    descricao: el("textarea", { maxlength: "240", id: "pa-desc" }),
+  };
+  const addParceiro = el("button", { type: "button", class: "btn" }, "Adicionar parceiro");
+  addParceiro.addEventListener("click", () => executar(addParceiro, async () => {
+    await estado.store.salvarParceiro(Object.fromEntries(Object.entries(pf).map(([k, v]) => [k, v.value])));
+    toast("Parceiro adicionado.");
+    telaAdmin();
+  }));
+  const campo = (id, rotulo, entrada) => el("div", { class: "campo" }, el("label", { for: id }, rotulo), entrada);
+
+  tela(
+    el("button", { type: "button", class: "voltar", onclick: () => irPara("provas") }, "← Voltar"),
+    el("section", { class: "painel" },
+      el("h2", {}, "Publicar provas do coletor"),
+      el("p", { class: "dica" }, "Envie o calendario.json gerado pelo coletor (python -m corridax ou o app web dele). Provas com o mesmo id são atualizadas; o destaque é mantido."),
+      arquivo, el("label", { class: "opcao" }, soConferidas, "Só as aprovadas (deixar \"a conferir\" de fora)"), previa, publicar),
+    el("section", { class: "painel" },
+      el("h2", {}, `Provas publicadas (${provas.length})`),
+      el("p", { class: "dica" }, "\"Destaque\" é o plano gold: a prova aparece no topo do calendário. As confirmações são o número para mostrar aos organizadores."),
+      exportar,
+      el("div", { style: "margin-top:8px" }, linhas.length ? linhas : el("p", { class: "vazio" }, "Nenhuma prova publicada ainda."))),
+    el("section", { class: "painel" },
+      el("h2", {}, "Parceiros"),
+      el("div", { class: "grade grade--2" }, campo("pa-nome", "Nome", pf.nome), campo("pa-cat", "Categoria", pf.categoria),
+        campo("pa-reg", "Região", pf.regiao), campo("pa-cid", "Cidade", pf.cidade),
+        campo("pa-ig", "Instagram", pf.instagram), campo("pa-wa", "WhatsApp", pf.whatsapp)),
+      campo("pa-site", "Site", pf.site), campo("pa-desc", "Descrição curta", pf.descricao), addParceiro,
+      el("h3", {}, `Cadastrados (${parceiros.length})`),
+      parceiros.map((p) => {
+        const rem = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, "Remover");
+        rem.addEventListener("click", () => {
+          if (!confirmarAcao(rem, "Confirmar")) return;
+          executar(rem, async () => { await estado.store.removerParceiro(p.id); telaAdmin(); });
+        });
+        return el("div", { class: "pessoa" }, el("div", { class: "info" }, el("b", {}, p.nome), el("span", {}, [CATEGORIAS[p.categoria], NOME_REGIAO[p.regiao] || "online", p.cidade].join(" · "))), rem);
+      })));
+}
+
+// ============================================================================
+//  INÍCIO
+// ============================================================================
+async function aoMudarUsuario(u) {
+  estado.usuario = u;
+  if (!u) {
+    estado.perfil = null;
+    telaLogin();
+    return;
+  }
+  tela(el("p", { class: "carregando" }, "Carregando seu perfil..."));
+  try {
+    [estado.perfil, estado.admin] = await Promise.all([estado.store.perfil(u.uid), estado.store.ehAdmin()]);
+  } catch (erro) {
+    console.error(erro);
+    telaLogin("Não foi possível carregar seu perfil. Verifique a internet e tente de novo.");
+    return;
+  }
+  if (!estado.perfil) return telaPerfil(true);
+  const pref = preferencias();
+  estado.filtros.regioes = new Set(pref?.regioes ?? [estado.perfil.regiao]);
+  estado.filtros.distancias = new Set(pref?.distancias || []);
+  estado.filtros.tematica = Boolean(pref?.tematica);
+  estado.filtros.noturna = Boolean(pref?.noturna);
+  atualizarTopo();
+  irPara(estado.aba || "provas");
+}
+
+async function iniciar() {
+  estado.demo = !FIREBASE_CONFIG;
+  estado.store = estado.demo ? new StoreDemo() : new StoreFirebase(FIREBASE_CONFIG);
+  for (const b of document.querySelectorAll("#abas button")) b.addEventListener("click", () => irPara(b.dataset.aba));
+  $("#btn-perfil").addEventListener("click", () => telaPerfil(false));
+  try {
+    await estado.store.iniciar(aoMudarUsuario);
+  } catch (erro) {
+    console.error(erro);
+    $("#carregando").textContent = "Não foi possível carregar o app (sem internet?). Recarregue a página.";
+  }
+}
+
+iniciar();
+</script>
+</body>
+</html>

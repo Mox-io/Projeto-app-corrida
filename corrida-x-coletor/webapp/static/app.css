@@ -197,3 +197,4 @@ textarea { resize: vertical; min-height: 72px; }
 .prova-links a { color: var(--accent); font-weight: 500; display: inline-block; padding: 6px 0; }
 .prova .selo { flex: none; }
 .vazio { color: var(--muted); font-size: 14px; padding: 12px 0; }
+.prova-etiquetas { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }

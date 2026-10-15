@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, field_validator
 from corridax.coleta import MOTIVOS_LEGIVEIS
 from corridax.models import Corrida, Item
 from corridax.regioes import validar_regiao
+from corridax.tags import etiquetas
 
 MAX_PROVAS = 600  # teto de provas por chamada de triagem/planilha
 
@@ -152,5 +153,6 @@ def item_para_json(item: Item) -> dict:
         situacao=item.situacao,
         motivo=item.motivo,
         motivo_texto=MOTIVOS_LEGIVEIS.get(item.motivo, item.motivo),
+        tags=etiquetas(item.corrida),
     )
     return dados

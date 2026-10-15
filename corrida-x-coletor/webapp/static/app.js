@@ -448,6 +448,7 @@ function criarProva(item) {
       : el("span", { class: `selo ${item.situacao === "conferir" ? "selo--warn" : ""}` }, item.situacao === "conferir" ? "a conferir" : "descartada");
 
   const meta = [item.horario, item.local || "local não informado", item.regiao].filter(Boolean).join(" · ");
+  const etiquetas = (item.tags || []).map((t) => el("span", { class: "selo selo--ok" }, t === "tematica" ? "temática" : t));
   const detalhes = [
     item.distancias?.length ? item.distancias.join(", ") : null,
     item.organizador ? `Organização: ${item.organizador}` : null,
@@ -458,6 +459,7 @@ function criarProva(item) {
     "li",
     { class: `prova prova--${item.situacao}` },
     el("div", { class: "prova-cab" }, el("div", {}, el("div", { class: "prova-nome" }, item.nome), el("div", { class: "prova-meta" }, meta)), selo),
+    etiquetas.length ? el("div", { class: "prova-etiquetas" }, etiquetas) : null,
     detalhes.length ? el("div", { class: "prova-linha" }, detalhes.join(" · ")) : null,
     extras.length ? el("div", { class: "prova-linha" }, extras.join(" · ")) : null,
     item.situacao !== "aprovada" ? el("div", { class: "prova-linha" }, item.motivo_texto) : null,
