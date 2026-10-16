@@ -120,6 +120,11 @@ class AisaClient:
         if isinstance(conteudo, list):  # alguns provedores devolvem blocos de texto
             conteudo = "".join(bloco.get("text", "") for bloco in conteudo if isinstance(bloco, dict))
         if not isinstance(conteudo, str) or not conteudo.strip():
+            mensagem = dados["choices"][0].get("message") or {}
+            if mensagem.get("reasoning_content") or mensagem.get("reasoning"):
+                # Modelos que "pensam" (ex.: deepseek) podem gastar todo o max_tokens no raciocínio.
+                raise AisaError("O modelo gastou a resposta inteira raciocinando e não devolveu o JSON. "
+                                "Use em AISA_MODEL um modelo sem raciocínio (ex.: qwen-flash ou gpt-4.1-mini).")
             raise AisaError("O LLM devolveu uma resposta vazia.")
         return conteudo
 
