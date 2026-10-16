@@ -10,7 +10,7 @@ from contextlib import redirect_stdout
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from corridax.aisa_client import AisaError, extrair_itens
+from corridax.aisa_client import AisaClient, AisaError, extrair_itens
 from corridax.cache import CacheBusca
 from corridax.cidades import local_da_busca, nome_da_cidade, validar_uf
 from corridax.cli import main as cli_main
@@ -109,6 +109,34 @@ class TestAisa(unittest.TestCase):
     def test_erro_da_tarefa(self):
         with self.assertRaises(AisaError):
             extrair_itens({"tasks": [{"status_code": 40501, "status_message": "Invalid Field"}]})
+
+    def _cliente_com_respostas(self, respostas):
+        esperas = []
+
+        class Falso(AisaClient):
+            def post(self, *a, **k):
+                return respostas.pop(0)
+
+        return Falso("sk-teste", esperar=esperas.append), esperas
+
+    def test_erro_interno_tenta_de_novo(self):
+        erro = {"tasks": [{"status_code": 40101, "status_message": "Internal SE Server Error."}]}
+        ok = {"tasks": [{"status_code": 20000, "result": [{"items": [{"type": "organic", "title": "A"}]}]}]}
+        cliente, esperas = self._cliente_com_respostas([erro, erro, ok])
+        with self.assertLogs("corridax.aisa_client", level="WARNING"):
+            self.assertEqual(len(cliente.buscar_google("x", "Brazil", "pt", 10)), 1)
+        self.assertEqual(esperas, [5, 15])
+        # três erros seguidos: desiste e mostra o erro
+        cliente, esperas = self._cliente_com_respostas([erro, erro, erro])
+        with self.assertLogs("corridax.aisa_client", level="WARNING"), self.assertRaises(AisaError) as caso:
+            cliente.buscar_google("x", "Brazil", "pt", 10)
+        self.assertEqual((caso.exception.codigo, esperas), (40101, [5, 15]))
+
+    def test_outros_erros_nao_tentam_de_novo(self):
+        cliente, esperas = self._cliente_com_respostas([{"tasks": [{"status_code": 40501, "status_message": "Invalid Field"}]}])
+        with self.assertRaises(AisaError):
+            cliente.buscar_google("x", "Brazil", "pt", 10)
+        self.assertEqual(esperas, [])
 
     def test_resultado_parcial_e_aproveitado(self):
         item = {"type": "organic", "title": "Corrida", "url": "https://a.example/x"}

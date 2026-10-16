@@ -8,6 +8,7 @@ Rotas usadas (conforme a documentação pública da AIsa):
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 import requests
@@ -20,14 +21,20 @@ log = logging.getLogger(__name__)
 # pode demorar, por isso a leitura tem um prazo generoso.
 TIMEOUT = (10, 90)
 PARCIAL = 40106  # DataForSEO: "Task completed with partial results"
+ERRO_INTERNO = 40101  # DataForSEO: "Internal SE Server Error" (passageiro, sem cobrança)
+ESPERAS_ERRO_INTERNO = (5, 15)  # segundos antes de cada nova tentativa
 
 
 class AisaError(Exception):
-    """Falha ao falar com a AIsa. A mensagem já vem em português e sem dados sensíveis."""
+    """Falha ao falar com a AIsa. A mensagem já vem em português e sem dados sensíveis.
 
-    def __init__(self, mensagem: str, status: int | None = None):
+    `status` é o HTTP; `codigo` é o código do provedor de dados (DataForSEO), quando houver.
+    """
+
+    def __init__(self, mensagem: str, status: int | None = None, codigo: int | None = None):
         super().__init__(mensagem)
         self.status = status
+        self.codigo = codigo
 
 
 _MENSAGENS_HTTP = {
@@ -40,8 +47,10 @@ _MENSAGENS_HTTP = {
 
 
 class AisaClient:
-    def __init__(self, api_key: str, base_url: str = "https://api.aisa.one", session: requests.Session | None = None):
+    def __init__(self, api_key: str, base_url: str = "https://api.aisa.one", session: requests.Session | None = None,
+                 esperar=time.sleep):
         self.base_url = base_url.rstrip("/")
+        self.esperar = esperar  # os testes trocam por uma função que não espera
         self.session = session or requests.Session()
         self.session.headers.update(
             {
@@ -105,8 +114,17 @@ class AisaClient:
                 "depth": profundidade,
             }
         ]
-        dados = self.post("/apis/v1/dataforseo/serp/google/organic/live/advanced", corpo)
-        return extrair_itens(dados)
+        # O erro interno do provedor (40101) é passageiro e não é cobrado: tenta de novo, com espera.
+        for espera in (*ESPERAS_ERRO_INTERNO, None):
+            dados = self.post("/apis/v1/dataforseo/serp/google/organic/live/advanced", corpo)
+            try:
+                return extrair_itens(dados)
+            except AisaError as erro:
+                if erro.codigo != ERRO_INTERNO or espera is None:
+                    raise
+                log.warning("  O Google (provedor) teve um erro interno; tentando de novo em %d s...", espera)
+                self.esperar(espera)
+        raise AssertionError("inalcançável")
 
     def conversar(self, modelo: str, mensagens: list[dict], temperatura: float = 0.4, max_tokens: int = 1800) -> str:
         """Chama o LLM (chat/completions, formato OpenAI) e devolve o texto da resposta."""
@@ -149,7 +167,8 @@ def extrair_itens(dados: dict) -> list[dict]:
     if codigo_tarefa == PARCIAL and resultados:
         log.warning("  Busca com resultado parcial (o provedor não trouxe todas as páginas); usando o que veio.")
     elif codigo_tarefa not in (None, 20000):
-        raise AisaError(f"Busca recusada: {tarefa.get('status_message', 'sem detalhe')} (código {codigo_tarefa}).")
+        raise AisaError(f"Busca recusada: {tarefa.get('status_message', 'sem detalhe')} (código {codigo_tarefa}).",
+                        codigo=codigo_tarefa)
 
     if not resultados or not isinstance(resultados[0], dict):
         return []  # busca válida, mas sem resultados
