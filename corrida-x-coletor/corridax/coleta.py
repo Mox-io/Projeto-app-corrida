@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 from .aisa_client import AisaClient
 from .cidades import eh_sao_paulo
 from .config import Config
-from .extracao import extrair_corridas, interpretar_resultados
+from .extracao import dominio_raiz, extrair_corridas, interpretar_resultados
 from .models import Corrida, Item
 from .regioes import classificar, normalizar
 
@@ -91,17 +91,33 @@ def triar(
         return "descartada", "fora_da_regiao"
     if tem_zonas and not regioes:
         return "conferir", "regiao_a_confirmar"
-    if not corrida.link_inscricao:
+    if not link_oficial(corrida.link_inscricao):
         return "conferir", "sem_link_oficial"
     if origem == "heuristica":
         return "conferir", "extraida_por_regras"
     return "aprovada", "ok"
 
 
+# Redes sociais e blogs divulgam provas, mas não são o site oficial nem a página de inscrição.
+_NAO_OFICIAIS = ("instagram.com", "facebook.com", "fb.com", "fb.me", "tiktok.com", "youtube.com", "youtu.be",
+                 "twitter.com", "x.com", "threads.net", "whatsapp.com", "wa.me", "blogspot.com", "wordpress.com",
+                 "medium.com")
+
+
+def link_oficial(url: str | None) -> bool:
+    """O link de inscrição vale como oficial? Post de Instagram ou blog de calendário, não."""
+    dominio = dominio_raiz(url)
+    return bool(dominio) and not any(dominio == d or dominio.endswith("." + d) for d in _NAO_OFICIAIS)
+
+
 # ---------- Provas repetidas ----------
 
 _PALAVRAS_VAZIAS = {"a", "o", "de", "da", "do", "das", "dos", "e", "edicao", "corrida", "etapa", "sp", "sao", "paulo",
                     "2025", "2026", "2027", "2028"}
+# Palavras comuns demais em nomes de prova para, sozinhas, indicarem que são a mesma.
+_GENERICAS = {"run", "running", "night", "circuito", "corridas", "meia", "maratona", "km", "kids", "trail", "desafio",
+              "track", "field", "series", "shopping", "prova", "rua", "street", "oficial", "festival", "caminhada",
+              "super", "family", "fun", "edition", "solidaria", "noturna", "noturno", "cidade"}
 
 
 def chave(corrida: Corrida) -> str:
@@ -121,6 +137,8 @@ def _preenchidos(c: Corrida) -> int:
 def mesclar(a: Corrida, b: Corrida) -> Corrida:
     """Fica a versão mais completa; campos vazios dela são completados pela outra."""
     base, extra = (a, b) if _preenchidos(a) >= _preenchidos(b) else (b, a)
+    if link_oficial(extra.link_inscricao) and not link_oficial(base.link_inscricao):
+        base.link_inscricao, base.plataforma = extra.link_inscricao, extra.plataforma  # o oficial vence o blog/post
     for campo in ("horario", "local", "cidade", "organizador", "preco", "porte", "link_inscricao", "plataforma"):
         if not getattr(base, campo) and getattr(extra, campo):
             setattr(base, campo, getattr(extra, campo))
@@ -133,17 +151,28 @@ def _palavras_uteis(nome: str) -> list[str]:
     return [p for p in normalizar(nome).split() if p not in _PALAVRAS_VAZIAS and not re.fullmatch(r"\d+a?", p)]
 
 
-def _parecidas(a: Corrida, b: Corrida) -> bool:
-    """Mesmo dia e um nome é o começo do outro: 'SporTV Run' x '6ª SporTV Run, Super 10K'.
+def _distintivas(c: Corrida) -> set[str]:
+    """Palavras que identificam a prova: sem as genéricas ("run", "circuito") e sem o nome da cidade."""
+    da_cidade = set(normalizar(c.cidade).split())
+    return {p for p in _palavras_uteis(c.nome) if p not in _GENERICAS and p not in da_cidade and len(p) >= 4}
 
-    Exige começo (e não "contido em") e ao menos 2 palavras úteis no nome menor: assim
-    "Night Run" não engole "Smart Fit Night Run" do mesmo dia.
+
+def _parecidas(a: Corrida, b: Corrida) -> bool:
+    """Mesmo dia e nomes que falam da mesma prova.
+
+    1. Um nome é o começo do outro: 'SporTV Run' x '6ª SporTV Run, Super 10K' (ao menos 2 palavras úteis,
+       para "Night Run" não engolir "Smart Fit Night Run").
+    2. Ou têm uma palavra distintiva em comum: 'Blue Run 2026 – Circuito Porto Saúde – etapa de Campinas'
+       x 'Blue Run Campinas 2026' ("blue"); 'Circuito dos Distritos de Campinas' x 'Circuito de Corridas dos
+       Distritos' ("distritos"). Palavras genéricas e o nome da cidade não contam.
     """
     if a.data != b.data:
         return False
     pa, pb = _palavras_uteis(a.nome), _palavras_uteis(b.nome)
     menor, maior = (pa, pb) if len(pa) <= len(pb) else (pb, pa)
-    return len(menor) >= 2 and maior[: len(menor)] == menor
+    if len(menor) >= 2 and maior[: len(menor)] == menor:
+        return True
+    return bool(_distintivas(a) & _distintivas(b))
 
 
 def juntar_repetidas(corridas: list[tuple[Corrida, str, str]]) -> list[tuple[Corrida, str, str]]:

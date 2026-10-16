@@ -14,7 +14,9 @@ from corridax.aisa_client import AisaClient, AisaError, extrair_itens
 from corridax.cache import CacheBusca
 from corridax.cidades import local_da_busca, nome_da_cidade, validar_uf
 from corridax.cli import main as cli_main
-from corridax.coleta import buscar_consulta, chave, coletar, juntar_repetidas, meses_da_janela, nao_e_corrida, triar
+from corridax.coleta import (
+    buscar_consulta, chave, coletar, juntar_repetidas, link_oficial, meses_da_janela, nao_e_corrida, triar,
+)
 from corridax.config import Config
 from corridax.demo_data import HOJE_DEMO, ClienteDemo
 from corridax.extracao import (
@@ -373,6 +375,35 @@ class TestTriagem(unittest.TestCase):
         junta, consulta, origem = unicas[0]
         self.assertEqual((junta.horario, origem, consulta), ("07:00", "llm", "q1"))
         self.assertTrue(junta.link_inscricao)
+
+    def test_juntar_por_palavra_distintiva(self):
+        # Casos da busca real em Campinas (22/11 e 08/11/2026)
+        blue_a = corrida(nome="Blue Run 2026 – Circuito Porto Saúde – etapa de Campinas", cidade="Campinas",
+                         link_inscricao="https://esportividade.com.br/evento/blue-run")
+        blue_b = corrida(nome="Blue Run Campinas 2026", cidade="Campinas", link_inscricao="https://correriacampinas.com.br/x")
+        distr_a = corrida(nome="Circuito dos Distritos de Campinas - Joaquim Egídio", cidade="Campinas", horario="07:30",
+                          link_inscricao="https://corridanossadodiaadia.blogspot.com/2025/10/calendario.html")
+        distr_b = corrida(nome="Circuito de Corridas dos Distritos", cidade="Campinas",
+                          link_inscricao="https://minhasinscricoes.com.br/Evento/Distritos")
+        outra = corrida(nome="Corrida Good Run Campinas 2026", cidade="Campinas")  # só "good" é distintiva
+        unicas = juntar_repetidas([(c, "q", "llm") for c in (blue_a, blue_b, distr_a, distr_b, outra)])
+        self.assertEqual(len(unicas), 3)
+        distritos = next(c for c, _, _ in unicas if "Distritos" in c.nome)
+        self.assertEqual(distritos.link_inscricao, "https://minhasinscricoes.com.br/Evento/Distritos")  # o oficial vence o blog
+        self.assertEqual(distritos.horario, "07:30")
+
+    def test_generica_ou_cidade_nao_junta(self):
+        a = corrida(nome="Night Run Campinas", cidade="Campinas")
+        b = corrida(nome="Circuito Noturno Run Campinas", cidade="Campinas")
+        self.assertEqual(len(juntar_repetidas([(a, "q", "llm"), (b, "q", "llm")])), 2)
+
+    def test_link_oficial(self):
+        self.assertTrue(link_oficial("https://www.ticketsports.com.br/e/x"))
+        self.assertFalse(link_oficial("https://www.instagram.com/p/DRMxA0Mjfvm/"))
+        self.assertFalse(link_oficial("https://corridanossadodiaadia.blogspot.com/2025/10/x.html"))
+        self.assertFalse(link_oficial(None))
+        c = corrida(cidade="Campinas", local="Taquaral", link_inscricao="https://www.instagram.com/p/x/")
+        self.assertEqual(triar(c, (), HOJE, FIM, "Campinas", "llm"), ("conferir", "sem_link_oficial"))
 
     def test_chave_ignora_ano_e_ordinal(self):
         self.assertEqual(chave(corrida(nome="Corrida Dorina 2026")), chave(corrida(nome="Corrida Dorina")))
