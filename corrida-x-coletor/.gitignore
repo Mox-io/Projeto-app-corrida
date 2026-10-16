@@ -8,3 +8,6 @@ __pycache__/
 
 # Resultado das execuções (planilhas geradas)
 output/
+
+# Cache do deploy do Firebase
+.firebase/

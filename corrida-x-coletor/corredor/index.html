@@ -190,13 +190,14 @@ details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; f
 
 // ------------------------- CONFIGURAÇÃO -------------------------
 // Cole aqui a configuração do app Web do Firebase (Configurações do projeto > Seus apps).
-// Deixe null para o modo demonstração.
-const FIREBASE_CONFIG = null;
-/* Exemplo:
+// Esses dados não são segredo (vão para o navegador de todo mundo); a proteção está no firestore.rules.
+// Deixe null para o modo demonstração. Com a configuração, "?demo" no endereço também abre a demonstração.
 const FIREBASE_CONFIG = {
-  apiKey: "...", authDomain: "seu-projeto.firebaseapp.com", projectId: "seu-projeto", appId: "...",
+  apiKey: "AIzaSyDinkth3a0tHE9sJSJEBra8DsvTc-uuiTE",
+  authDomain: "corrida-x.firebaseapp.com",
+  projectId: "corrida-x",
+  appId: "1:833045052255:web:f8e046a99aacf6749414ea",
 };
-*/
 const CONTATO_PARCEIROS = "mailto:contato@exemplo.com?subject=Quero%20ser%20parceiro%20do%20Corrida%20X";
 const CIDADE = "São Paulo"; // cidade padrão (a do coletor) e, por enquanto, a única dividida em zonas
 // Sugestões do campo Cidade; a pessoa pode digitar outra. As cidades das provas publicadas entram também.
@@ -1549,7 +1550,7 @@ async function aoMudarUsuario(u) {
 }
 
 async function iniciar() {
-  estado.demo = !FIREBASE_CONFIG;
+  estado.demo = !FIREBASE_CONFIG || new URLSearchParams(location.search).has("demo");
   estado.store = estado.demo ? new StoreDemo() : new StoreFirebase(FIREBASE_CONFIG);
   for (const b of document.querySelectorAll("#abas button")) b.addEventListener("click", () => irPara(b.dataset.aba));
   $("#btn-perfil").addEventListener("click", () => telaPerfil(false));
