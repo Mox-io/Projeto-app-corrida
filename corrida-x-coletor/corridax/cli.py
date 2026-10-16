@@ -9,6 +9,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from .aisa_client import AisaClient, AisaError
+from .cache import CacheBusca
 from .coleta import (
     MOTIVOS_LEGIVEIS, buscar_consulta, fim_da_janela, meses_da_janela, resumo_por_motivo, resumo_por_situacao,
     triar_todas,
@@ -41,6 +42,8 @@ def criar_parser() -> argparse.ArgumentParser:
     p.add_argument("--demo", action="store_true", help="Busca e IA simuladas com a amostra do projeto piloto (sem custo)")
     p.add_argument("-y", "--yes", action="store_true", help="Não pedir confirmação antes de gastar créditos")
     p.add_argument("--saida", type=Path, help="Pasta de saída (padrão: OUTPUT_DIR do .env)")
+    p.add_argument("--sem-cache", action="store_true",
+                   help="Faz a busca no Google de novo mesmo que a mesma consulta tenha sido guardada nas últimas 24 h")
     return p
 
 
@@ -103,6 +106,11 @@ def main(argv: list[str] | None = None) -> int:
 
     usa_llm = not args.sem_llm
     fim = fim_da_janela(hoje, semanas)
+    # Buscas pagas ficam guardadas por 24 h em OUTPUT_DIR/buscas-guardadas (fora do Git).
+    cache = None if args.demo else CacheBusca(cfg.output_dir / "buscas-guardadas")
+    guardadas = 0
+    if cache and not args.sem_cache:
+        guardadas = sum(cache.ler(c, cfg.search_location, cfg.search_language, profundidade) is not None for c in consultas)
     modo = "DEMONSTRAÇÃO (busca e IA simuladas)" if args.demo else f"busca real em {cfg.city_name}"
     plano = (
         f"\nModo: {modo}\n"
@@ -111,9 +119,11 @@ def main(argv: list[str] | None = None) -> int:
         f"Consultas: {len(consultas)}\n"
     )
     if not args.demo:
-        plano += f"Custo: {len(consultas)} busca(s) no Google (até {profundidade} resultados cada)"
+        plano += f"Custo: {len(consultas) - guardadas} busca(s) no Google (até {profundidade} resultados cada)"
         plano += f" + até {len(consultas)} chamada(s) ao LLM" if usa_llm else ""
         plano += " — consome créditos da AIsa.\n"
+        if guardadas:
+            plano += f"  ({guardadas} busca(s) já guardada(s) nas últimas 24 h: reaproveitadas, sem custo de busca)\n"
     if not _confirmar(plano, sem_perguntar=args.yes or args.demo):
         print("Cancelado.")
         return 0
@@ -126,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
         for consulta in consultas:
             print(f"Buscando: {consulta}")
             try:
-                corridas, origem = buscar_consulta(cliente, cfg, consulta, profundidade, hoje, usa_llm)
+                corridas, origem = buscar_consulta(cliente, cfg, consulta, profundidade, hoje, usa_llm,
+                                                   cache=cache, reaproveitar=not args.sem_cache)
             except AisaError as erro:
                 if erro.status in ERROS_FATAIS:
                     raise

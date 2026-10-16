@@ -7,12 +7,13 @@ import io
 import tempfile
 import unittest
 from contextlib import redirect_stdout
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from corridax.aisa_client import AisaError, extrair_itens
+from corridax.cache import CacheBusca
 from corridax.cli import main as cli_main
-from corridax.coleta import chave, coletar, juntar_repetidas, meses_da_janela, nao_e_corrida, triar
+from corridax.coleta import buscar_consulta, chave, coletar, juntar_repetidas, meses_da_janela, nao_e_corrida, triar
 from corridax.config import Config
 from corridax.demo_data import HOJE_DEMO, ClienteDemo
 from corridax.extracao import (
@@ -181,6 +182,64 @@ class TestExtracao(unittest.TestCase):
 
         with self.assertRaises(AisaError):
             extrair_corridas(Cliente(), self.resultados, cfg(), HOJE)
+
+
+class TestCacheBusca(unittest.TestCase):
+    """A busca paga fica guardada antes da IA: se a IA falhar, a próxima execução não paga a busca de novo."""
+
+    ITENS = [{"type": "organic", "title": "Corrida do Parque Ibirapuera", "url": "https://agenda.example/a",
+              "description": "Domingo, 18/10/2026, 7h, Obelisco do Ibirapuera. 5 km e 10 km."}]
+
+    def setUp(self):
+        self.pasta = Path(tempfile.mkdtemp())
+        self.agora = datetime(2026, 10, 16, 9, 0)
+        self.cache = CacheBusca(self.pasta, agora=lambda: self.agora)
+
+    def cliente(self, ia_falha: bool):
+        teste = self
+
+        class Cliente:
+            buscas = 0
+
+            def buscar_google(self, *a):
+                Cliente.buscas += 1
+                return teste.ITENS
+
+            def conversar(self, *a, **k):
+                if ia_falha:
+                    raise AisaError("sem saldo", status=402)
+                return '{"corridas": []}'
+
+        return Cliente
+
+    def test_falha_da_ia_nao_perde_a_busca(self):
+        Falha = self.cliente(ia_falha=True)
+        with self.assertRaises(AisaError):
+            buscar_consulta(Falha(), cfg(), "corrida zona sul", 20, HOJE, cache=self.cache)
+        Ok = self.cliente(ia_falha=False)
+        corridas, origem = buscar_consulta(Ok(), cfg(), "corrida zona sul", 20, HOJE, cache=self.cache)
+        self.assertEqual((Falha.buscas, Ok.buscas, origem), (1, 0, "llm"))  # a segunda vez não buscou
+
+    def test_reaproveitar_false_busca_de_novo_e_guarda(self):
+        Ok = self.cliente(ia_falha=False)
+        buscar_consulta(Ok(), cfg(), "corrida zona sul", 20, HOJE, cache=self.cache)
+        buscar_consulta(Ok(), cfg(), "corrida zona sul", 20, HOJE, cache=self.cache, reaproveitar=False)
+        self.assertEqual(Ok.buscas, 2)
+        self.assertIsNotNone(self.cache.ler("corrida zona sul", cfg().search_location, "pt", 20))
+
+    def test_validade_e_parametros(self):
+        self.cache.gravar("corrida", "SP", "pt", 20, self.ITENS)
+        self.assertEqual(self.cache.ler("corrida", "SP", "pt", 20)[0], self.ITENS)
+        self.assertIsNone(self.cache.ler("corrida", "SP", "pt", 50))  # outra profundidade é outra busca
+        self.agora += timedelta(hours=25)
+        self.assertIsNone(self.cache.ler("corrida", "SP", "pt", 20))  # vencida
+
+    def test_arquivo_estragado_vira_busca_nova(self):
+        self.cache.gravar("corrida", "SP", "pt", 20, self.ITENS)
+        for arquivo in self.pasta.glob("*.json"):
+            arquivo.write_text("{pela metade", encoding="utf-8")
+        with self.assertLogs("corridax.cache", level="WARNING"):
+            self.assertIsNone(self.cache.ler("corrida", "SP", "pt", 20))
 
 
 class TestTriagem(unittest.TestCase):

@@ -12,12 +12,16 @@ from __future__ import annotations
 import logging
 import re
 from datetime import date, timedelta
+from typing import TYPE_CHECKING
 
 from .aisa_client import AisaClient
 from .config import Config
 from .extracao import extrair_corridas, interpretar_resultados
 from .models import Corrida, Item
 from .regioes import classificar, normalizar
+
+if TYPE_CHECKING:  # cache.py importa slug() daqui; o import real criaria um ciclo
+    from .cache import CacheBusca
 
 log = logging.getLogger(__name__)
 
@@ -157,10 +161,24 @@ def juntar_repetidas(corridas: list[tuple[Corrida, str, str]]) -> list[tuple[Cor
 
 
 def buscar_consulta(
-    cliente: AisaClient, cfg: Config, consulta: str, profundidade: int, hoje: date, usar_llm: bool = True
+    cliente: AisaClient, cfg: Config, consulta: str, profundidade: int, hoje: date, usar_llm: bool = True,
+    cache: CacheBusca | None = None, reaproveitar: bool = True,
 ) -> tuple[list[Corrida], str]:
-    """Uma consulta: busca no Google + extração. Devolve (corridas, origem)."""
-    itens = cliente.buscar_google(consulta, cfg.search_location, cfg.search_language, profundidade)
+    """Uma consulta: busca no Google + extração. Devolve (corridas, origem).
+
+    Com `cache`, a busca paga é guardada ANTES de chamar a IA: se a IA falhar (saldo, modelo,
+    formato), a próxima execução reaproveita os resultados sem pagar a busca de novo.
+    `reaproveitar=False` força uma busca nova (que também fica guardada).
+    """
+    parametros = (consulta, cfg.search_location, cfg.search_language, profundidade)
+    guardada = cache.ler(*parametros) if cache and reaproveitar else None
+    if guardada:
+        itens, salvo_em = guardada
+        log.info("  Usando a busca guardada em %s (sem custo de busca).", salvo_em.strftime("%d/%m %H:%M"))
+    else:
+        itens = cliente.buscar_google(*parametros)
+        if cache:
+            cache.gravar(*parametros, itens)
     resultados = interpretar_resultados(itens)
     log.info("  %d resultado(s) úteis para '%s'.", len(resultados), consulta)
     return extrair_corridas(cliente, resultados, cfg, hoje, usar_llm=usar_llm)

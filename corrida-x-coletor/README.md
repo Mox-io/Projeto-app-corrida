@@ -77,8 +77,11 @@ O programa mostra o plano (consultas e custo) e pergunta `Continuar? [s/N]`; `--
 | Mais semanas | `--semanas 12` |
 | Gastar menos | `--limite-consultas 3` ou `--profundidade 10` |
 | Sem IA | `--sem-llm` (regras simples; tudo vai para "a conferir") |
+| Buscar de novo no Google | `--sem-cache` (ignora a busca guardada) |
 
 Resultados em `output\<data-hora>\calendario.csv` (separado por `;`, abre direto no Excel) e `calendario.json`.
+
+**Buscas guardadas:** cada busca paga no Google fica em `output\buscas-guardadas\` por 24 horas, gravada antes de chamar a IA. Se a IA falhar (sem saldo, modelo indisponível, resposta fora do formato), rode o mesmo comando de novo: o plano mostra a busca como já guardada e só a IA é chamada.
 
 ## App web
 
