@@ -429,6 +429,10 @@ class StoreDemo {
     try { localStorage.removeItem(this.chave); } catch { /* ignora */ }
     this.d = this.semente();
   }
+  async excluirConta() {
+    this.zerar();
+    this.aoMudar(null);
+  }
   semente() {
     const pessoas = {
       "demo-ana": { nome: "Ana Lima", handle: "ana.corre", regiao: "zona sul", distancias: ["10", "meia"], instagram: "" },
@@ -830,6 +834,31 @@ class StoreFirebase {
   async removerProva(id) { await this.F.deleteDoc(this.ref("provas", id)); }
   async salvarParceiro(p) { await this.F.addDoc(this.col("parceiros"), validarParceiro(p)); }
   async removerParceiro(id) { await this.F.deleteDoc(this.ref("parceiros", id)); }
+
+  // LGPD: apaga tudo o que é da pessoa e, por último, o login. Grupos que ela criou são apagados;
+  // nos outros, ela só sai. As regras do Firestore permitem cada uma dessas exclusões.
+  async excluirConta() {
+    const { query, where, writeBatch } = this.F;
+    const uid = this.uid;
+    for (const g of await this.meusGrupos()) await this.sairGrupo(g.id);
+    const consultas = [["confirmacoes", "uid"], ["treinos", "uid"], ["follows", "seguidor"], ["follows", "alvo"]];
+    const docs = (await Promise.all(consultas.map(([c, campo]) => this.F.getDocs(query(this.col(c), where(campo, "==", uid))))))
+      .flatMap((s) => s.docs);
+    for (let i = 0; i < docs.length; i += 400) {
+      const lote = writeBatch(this.db);
+      for (const d of docs.slice(i, i + 400)) lote.delete(d.ref);
+      await lote.commit();
+    }
+    await this.F.deleteDoc(this.ref("usuarios", uid));
+    try {
+      await this.A.deleteUser(this.user);
+    } catch (erro) {
+      if (erro.code !== "auth/requires-recent-login") throw erro;
+      // O Google pede um login recente para apagar a conta: confirma com o pop-up e tenta de novo.
+      await this.A.reauthenticateWithPopup(this.user, new this.A.GoogleAuthProvider());
+      await this.A.deleteUser(this.user);
+    }
+  }
 }
 
 // ============================================================================
@@ -906,7 +935,8 @@ function telaLogin(mensagem = "") {
       mensagem ? el("p", { class: "erro", role: "alert" }, mensagem) : null,
       botao,
       estado.demo ? el("p", { class: "aviso", style: "margin-top:12px" }, "Modo demonstração: dados de exemplo, guardados só neste navegador. Pessoas, parceiros e links são fictícios.") : null,
-      el("p", { class: "dica" }, "Ao entrar, seu nome, região, provas confirmadas e treinos ficam visíveis para outros corredores logados.")));
+      el("p", { class: "dica" }, "Ao entrar, seu nome, cidade, provas confirmadas e treinos ficam visíveis para outros corredores logados. ",
+        el("a", { href: "privacidade.html" }, "Política de privacidade"))));
   $(".login .logo").innerHTML = '<rect width="64" height="64" rx="14" fill="#0f6e56"/><path d="M20 20l24 24M44 20L20 44" stroke="#fff" stroke-width="7" stroke-linecap="round"/>';
 }
 
@@ -969,7 +999,20 @@ function telaPerfil(primeiraVez = false) {
   const acoes = primeiraVez ? null : el("div", { class: "painel" },
     estado.admin ? el("button", { type: "button", class: "btn btn--sec btn--cheio", style: "margin-bottom:8px", onclick: () => telaAdmin() }, "Administração (provas e parceiros)") : null,
     estado.demo ? el("button", { type: "button", class: "btn btn--sec btn--cheio", style: "margin-bottom:8px", onclick: async () => { estado.store.zerar(); location.reload(); } }, "Recomeçar a demonstração") : null,
-    el("button", { type: "button", class: "btn btn--perigo btn--cheio", onclick: (e) => executar(e.currentTarget, () => estado.store.sair()) }, "Sair"));
+    el("button", { type: "button", class: "btn btn--perigo btn--cheio", onclick: (e) => executar(e.currentTarget, () => estado.store.sair()) }, "Sair"),
+    el("details", { class: "mais", style: "margin-top:14px" },
+      el("summary", {}, "Privacidade e exclusão da conta"),
+      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas, treinos, quem você segue e quem segue você, ",
+        "e tira você dos grupos (os que você criou são apagados). Não dá para desfazer. ",
+        el("a", { href: "privacidade.html" }, "Política de privacidade")),
+      el("button", {
+        type: "button", class: "btn btn--perigo btn--cheio",
+        onclick: (e) => {
+          const b = e.currentTarget;
+          if (!confirmarAcao(b, "Toque de novo para apagar tudo")) return;
+          executar(b, async () => { await estado.store.excluirConta(); toast("Conta excluída."); });
+        },
+      }, "Excluir minha conta")));
 
   $("#topo").hidden = primeiraVez;
   $("#abas").hidden = primeiraVez;
@@ -1025,9 +1068,10 @@ async function carregarProvas() {
 function passaFiltros(p) {
   const f = estado.filtros;
   if (!mesmaCidade(cidadeDa(p), f.cidade)) return false;
-  if (temZonas(f.cidade) && f.regioes && f.regioes.size) {
-    const regioesDaProva = p.regioes?.length ? p.regioes : [];
-    if (!regioesDaProva.some((r) => f.regioes.has(r))) return false;
+  // Prova sem zona definida aparece em qualquer filtro de zona (com a etiqueta "zona a confirmar"):
+  // senão ela some para quem filtra pela própria zona, que é quase todo mundo.
+  if (temZonas(f.cidade) && f.regioes && f.regioes.size && p.regioes?.length) {
+    if (!p.regioes.some((r) => f.regioes.has(r))) return false;
   }
   if (f.distancias.size) {
     const kms = distanciasEmKm(p.distancias);
@@ -1065,12 +1109,14 @@ function cartaoProva(p) {
       ? `${nomesCurtos(amigosVao)} ${amigosVao.length === 1 ? "vai" : "vão"}${outros > 0 ? ` · +${outros}` : ""}`
       : daProva.length ? `${daProva.length} ${daProva.length === 1 ? "confirmado" : "confirmados"}` : "Seja o primeiro a confirmar"));
 
+  const semZona = temZonas(cidadeDa(p)) && !p.regioes?.length;
   return el("li", { class: `cartao${p.destaque ? " cartao--gold" : ""}` },
     el("div", { class: "cartao-cab" },
       el("div", {}, el("div", { class: "cartao-nome" }, p.nome),
-        el("div", { class: "meta" }, [p.horario, p.local || "local a confirmar", p.regiao].filter(Boolean).join(" · "))),
+        el("div", { class: "meta" }, [p.horario, p.local || "local a confirmar", semZona ? null : p.regiao].filter(Boolean).join(" · "))),
       p.destaque ? el("span", { class: "selo selo--gold" }, "destaque") : null),
-    (tags.length || p.distancias?.length) ? el("div", { class: "etiquetas" },
+    (semZona || tags.length || p.distancias?.length) ? el("div", { class: "etiquetas" },
+      semZona ? el("span", { class: "selo selo--warn" }, "zona a confirmar") : null,
       tags.includes("tematica") ? el("span", { class: "selo selo--tema" }, "temática") : null,
       tags.includes("noturna") ? el("span", { class: "selo selo--noite" }, "noturna") : null,
       (p.distancias || []).map((d) => el("span", { class: "selo" }, d))) : null,

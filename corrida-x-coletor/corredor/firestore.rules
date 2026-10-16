@@ -76,7 +76,8 @@ service cloud.firestore {
         && request.resource.data.alvo != eu()
         && id == eu() + '_' + request.resource.data.alvo
         && soCampos(['seguidor', 'alvo', 'em']);
-      allow delete: if logado() && resource.data.seguidor == eu();
+      // quem segue desfaz; quem é seguido também pode remover (exclusão da conta, LGPD)
+      allow delete: if logado() && (resource.data.seguidor == eu() || resource.data.alvo == eu());
     }
 
     // Treinos: só o dono cria/apaga. Distância de 0 a 300 km.
