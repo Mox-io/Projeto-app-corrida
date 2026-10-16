@@ -57,6 +57,29 @@ class TestRegioes(unittest.TestCase):
         self.assertEqual(classificar("Lagoa do Taquaral"), ((), None))
         self.assertEqual(classificar(None), ((), None))
 
+    def test_locais_da_busca_real(self):
+        self.assertEqual(classificar("Parque Burle Marx")[0], ("zona sul",))
+        self.assertEqual(classificar("JD. BOTÂNICO")[0], ("zona sul",))
+        self.assertEqual(classificar("Obelisco aos Heróis de 32 - Parque do Ibirapuera")[0], ("zona sul",))
+        self.assertEqual(classificar("Rua X, Jardim Sul")[0], ("zona sul",))
+        self.assertEqual(classificar("Sambódromo do Anhembi")[0], ("zona norte",))
+
+    def test_bairro_citado_primeiro_vence(self):
+        self.assertEqual(classificar("Barra Funda, perto de Santana")[0], ("zona oeste",))
+
+    def test_nome_da_prova_quando_o_local_nao_diz(self):
+        self.assertEqual(classificar("São Paulo", "Circuito Popular - Etapa 45 - Butanta")[0], ("zona oeste",))
+        self.assertEqual(classificar(None, "Woman Run&dance Jardim Sul")[0], ("zona sul",))
+        # o local, quando diz algo, vence o nome
+        self.assertEqual(classificar("Parque Villa-Lobos", "Corrida do Butantã")[0], ("zona oeste",))
+        self.assertEqual(classificar("Parque do Carmo", "Corrida Butantã")[0], ("zona leste",))
+
+    def test_nome_ambiguo_nao_vira_regiao(self):
+        self.assertEqual(classificar("São Paulo", "Corrida da Saúde"), ((), None))
+        self.assertEqual(classificar(None, "Corrida da Liberdade"), ((), None))
+        self.assertEqual(classificar(None, "Meia Maratona de Sumaré"), ((), None))
+        self.assertEqual(classificar("Rua da Saúde, 100")[0], ("zona sul",))  # no local, vale
+
     def test_nao_confunde_palavra_dentro_de_outra(self):
         # "usp" não pode casar com "suspensa"
         self.assertEqual(classificar("Prova suspensa"), ((), None))

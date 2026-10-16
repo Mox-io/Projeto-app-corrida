@@ -78,7 +78,7 @@ def calendario_json(itens: list[Item], gerado_em: str, cidade: str = "São Paulo
         provas.append({
             "id": id_da_prova(c),
             "nome": c.nome, "data": c.data, "horario": c.horario, "local": c.local, "cidade": cidade, "regiao": c.regiao,
-            "regioes": list(classificar(c.local)[0]),  # chaves para filtrar: ["zona sul", "zona oeste"]
+            "regioes": list(classificar(c.local, c.nome)[0]),  # chaves para filtrar: ["zona sul", "zona oeste"]
             "distancias": c.distancias, "organizador": c.organizador, "plataforma": c.plataforma,
             "preco": c.preco, "porte": c.porte, "link_inscricao": c.link_inscricao,
             "fonte": {"nome": c.fonte_nome, "url": c.fonte_url, "coletado_em": c.coletado_em},

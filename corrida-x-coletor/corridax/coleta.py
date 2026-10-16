@@ -69,7 +69,7 @@ def triar(
 
     A ordem importa: primeiro os descartes definitivos, depois o que só pede conferência.
     """
-    regioes, rotulo = classificar(corrida.local)
+    regioes, rotulo = classificar(corrida.local, corrida.nome)
     corrida.regiao = rotulo or "A confirmar"
 
     if not corrida.data:

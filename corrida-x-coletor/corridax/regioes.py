@@ -44,17 +44,50 @@ LOCAIS_CONHECIDOS: list[tuple[tuple[str, ...], tuple[str, ...], str]] = [
     (("cidade universitaria", "usp"), ("zona oeste",), "Zona oeste"),
     (("parque do povo", "marginal pinheiros"), ("zona oeste",), "Oeste"),
     (("parque villa lobos", "villa lobos", "vila lobos"), ("zona oeste",), "Oeste"),
+    # Locais que apareceram nas buscas reais ou são largadas comuns (região pela subprefeitura).
+    (("parque burle marx", "burle marx"), ("zona sul",), "Zona sul"),
+    (("jardim botanico", "jd botanico", "zoologico de sao paulo", "parque do estado"), ("zona sul",), "Zona sul"),
+    (("represa de guarapiranga", "represa guarapiranga", "guarapiranga"), ("zona sul",), "Zona sul"),
+    (("plaza sul", "shopping plaza sul"), ("zona sul",), "Zona sul"),
+    (("parque das bicicletas",), ("zona sul",), "Zona sul"),
+    (("shopping ibirapuera", "shopping morumbi", "shopping interlagos"), ("zona sul",), "Zona sul"),
+    (("jockey club", "hipodromo de cidade jardim"), ("zona oeste",), "Oeste"),
+    (("parque da agua branca", "agua branca"), ("zona oeste",), "Oeste"),
+    (("memorial da america latina", "allianz parque"), ("zona oeste",), "Oeste"),
+    (("parque candido portinari", "ceagesp"), ("zona oeste",), "Oeste"),
+    (("parque da luz", "praca da se", "teatro municipal", "minhocao", "elevado joao goulart"), ("centro",), "Centro"),
+    (("parque da aclimacao",), ("centro",), "Centro"),
+    (("sambodromo do anhembi", "anhembi"), ("zona norte",), "Zona norte"),
+    (("parque da juventude", "horto florestal", "parque estadual alberto lofgren"), ("zona norte",), "Zona norte"),
+    (("parque ecologico do tiete",), ("zona leste",), "Zona leste"),
+    (("neo quimica arena", "arena corinthians", "arena de itaquera"), ("zona leste",), "Zona leste"),
+    (("parque do piqueri", "ceret", "parque ceret"), ("zona leste",), "Zona leste"),
 ]
 
-# Bairros: menos preciso que o local exato, mas ainda decidido no código.
+# Bairros: menos preciso que o local exato, mas ainda decidido no código (divisão por subprefeitura).
 BAIRROS: dict[str, tuple[str, ...]] = {
     "zona sul": ("moema", "vila mariana", "santo amaro", "jabaquara", "ipiranga", "saude", "campo belo",
-                 "brooklin", "interlagos", "vila clementino", "cursino", "socorro", "capao redondo"),
-    "zona norte": ("santana", "tucuruvi", "casa verde", "vila guilherme", "mandaqui", "tremembe", "freguesia do o"),
-    "zona leste": ("tatuape", "mooca", "itaquera", "penha", "vila prudente", "sao miguel", "guaianases", "analia franco"),
-    "zona oeste": ("pinheiros", "lapa", "butanta", "perdizes", "vila leopoldina", "alto de pinheiros", "jaguare"),
-    "centro": ("republica", "bela vista", "consolacao", "liberdade", "bom retiro", "luz"),
+                 "brooklin", "interlagos", "vila clementino", "cursino", "socorro", "capao redondo",
+                 "jardim sul", "vila andrade", "campo limpo", "cidade dutra", "grajau", "parelheiros",
+                 "agua funda", "chacara santo antonio", "cidade ademar", "pedreira", "jardim angela",
+                 "jardim sao luis", "americanopolis", "sacoma"),
+    "zona norte": ("santana", "tucuruvi", "casa verde", "vila guilherme", "mandaqui", "tremembe", "freguesia do o",
+                   "vila maria", "jacana", "pirituba", "perus", "brasilandia", "vila medeiros", "limao", "jaragua"),
+    "zona leste": ("tatuape", "mooca", "itaquera", "penha", "vila prudente", "sao miguel", "guaianases", "analia franco",
+                   "belem", "vila matilde", "ermelino matarazzo", "sao mateus", "cidade tiradentes", "vila formosa",
+                   "carrao", "agua rasa", "sapopemba", "itaim paulista", "bras", "pari", "aricanduva"),
+    "zona oeste": ("pinheiros", "lapa", "butanta", "perdizes", "vila leopoldina", "alto de pinheiros", "jaguare",
+                   "barra funda", "vila madalena", "sumare", "pompeia", "rio pequeno", "raposo tavares",
+                   "itaim bibi", "vila olimpia", "jardim paulista", "vila sonia", "jardins"),
+    "centro": ("republica", "bela vista", "consolacao", "liberdade", "bom retiro", "luz", "santa cecilia",
+               "higienopolis", "cambuci", "aclimacao"),
 }
+
+# No NOME da prova, estes termos querem dizer outra coisa com frequência ("Corrida da Saúde",
+# "Corrida da Liberdade", "Sumaré" é também uma cidade), então só valem quando aparecem no LOCAL.
+_SO_NO_LOCAL = {"saude", "luz", "socorro", "liberdade", "republica", "lapa", "penha", "pedreira", "belem",
+                "sumare", "pari", "bras", "jardins", "limao", "obelisco", "pama", "esperia", "usp", "agua branca",
+                "guarapiranga", "anhembi", "ceret", "morumbis"}
 
 _ROTULO_BAIRRO = {"zona sul": "Zona sul", "zona norte": "Zona norte", "zona leste": "Zona leste",
                   "zona oeste": "Zona oeste", "centro": "Centro"}
@@ -69,28 +102,42 @@ def _contem(texto: str, termo: str) -> bool:
     return _posicao(texto, termo) is not None
 
 
-def classificar(local: str | None) -> tuple[tuple[str, ...], str | None]:
-    """Devolve (regiões, rótulo) do local. ((), None) quando não dá para saber.
-
-    Vence o local citado primeiro ("Ponte Estaiada, Marginal Pinheiros" -> Ponte Estaiada) e,
-    na mesma posição, o apelido mais longo ("obelisco do ibirapuera" antes de "obelisco").
-    """
-    texto = normalizar(local)
+def _classificar_texto(texto: str, ignorar: frozenset[str] | set[str] = frozenset()) -> tuple[tuple[str, ...], str | None]:
     if not texto:
         return (), None
     candidatos = []
     for apelidos, regioes, rotulo in LOCAIS_CONHECIDOS:
         for apelido in apelidos:
+            if apelido in ignorar:
+                continue
             posicao = _posicao(texto, apelido)
             if posicao is not None:
                 candidatos.append((posicao, -len(apelido), regioes, rotulo))
     if candidatos:
         _, _, regioes, rotulo = min(candidatos, key=lambda c: (c[0], c[1]))
         return regioes, rotulo
-    for regiao, bairros in BAIRROS.items():
-        if any(_contem(texto, b) for b in bairros):
-            return (regiao,), _ROTULO_BAIRRO[regiao]
+    # Bairro: vence o citado primeiro e, na mesma posição, o nome mais longo ("jardim sul" antes de "sul...").
+    achados = [(_posicao(texto, b), -len(b), regiao) for regiao, bairros in BAIRROS.items()
+               for b in bairros if b not in ignorar]
+    achados = [a for a in achados if a[0] is not None]
+    if achados:
+        _, _, regiao = min(achados)
+        return (regiao,), _ROTULO_BAIRRO[regiao]
     return (), None
+
+
+def classificar(local: str | None, nome: str | None = None) -> tuple[tuple[str, ...], str | None]:
+    """Devolve (regiões, rótulo) do local. ((), None) quando não dá para saber.
+
+    Vence o local citado primeiro ("Ponte Estaiada, Marginal Pinheiros" -> Ponte Estaiada) e,
+    na mesma posição, o apelido mais longo ("obelisco do ibirapuera" antes de "obelisco").
+    Se o local não diz nada ("São Paulo", vazio), tenta o NOME da prova ("Circuito Popular -
+    Butantã"), sem os termos ambíguos de _SO_NO_LOCAL.
+    """
+    achado = _classificar_texto(normalizar(local))
+    if achado[0]:
+        return achado
+    return _classificar_texto(normalizar(nome), _SO_NO_LOCAL)
 
 
 def validar_regiao(regiao: str) -> str:
