@@ -12,6 +12,7 @@ from pathlib import Path
 
 from corridax.aisa_client import AisaError, extrair_itens
 from corridax.cache import CacheBusca
+from corridax.cidades import local_da_busca, nome_da_cidade, validar_uf
 from corridax.cli import main as cli_main
 from corridax.coleta import buscar_consulta, chave, coletar, juntar_repetidas, meses_da_janela, nao_e_corrida, triar
 from corridax.config import Config
@@ -20,7 +21,7 @@ from corridax.extracao import (
     encontrar_data, extrair_corridas, extrair_json, extrair_por_regras, interpretar_resultados, validar_corridas,
 )
 from corridax.models import Corrida, ResultadoBusca
-from corridax.regioes import classificar, consultas_da_regiao, validar_regiao
+from corridax.regioes import classificar, consultas_da_cidade, consultas_da_regiao, validar_regiao
 from corridax.relatorio import calendario_json, csv_bytes
 
 HOJE = date(2026, 10, 15)
@@ -205,6 +206,40 @@ class TestExtracao(unittest.TestCase):
 
         with self.assertRaises(AisaError):
             extrair_corridas(Cliente(), self.resultados, cfg(), HOJE)
+
+
+class TestCidades(unittest.TestCase):
+    def test_nome_e_local_da_busca(self):
+        self.assertEqual(nome_da_cidade("sao paulo"), "São Paulo")
+        self.assertEqual(nome_da_cidade("SP"), "São Paulo")
+        self.assertEqual(nome_da_cidade("SANTA MARIA"), "Santa Maria")
+        self.assertEqual(nome_da_cidade("jundiai"), "Jundiaí")
+        self.assertEqual(local_da_busca("Campinas"), "Campinas,State of Sao Paulo,Brazil")
+        self.assertEqual(local_da_busca("brasília"), "Brasilia,Federal District,Brazil")
+        self.assertEqual(local_da_busca("Palmas", "to"), "Palmas,State of Tocantins,Brazil")
+        self.assertEqual(local_da_busca("Cidadezinha", "MG"), "State of Minas Gerais,Brazil")  # fora da lista: o estado
+        self.assertEqual(local_da_busca("Cidadezinha"), "Brazil")
+        with self.assertRaises(ValueError):
+            local_da_busca("Palmas")  # existe no PR e no TO
+        with self.assertRaises(ValueError):
+            validar_uf("XX")
+
+    def test_consultas_da_cidade(self):
+        self.assertEqual(consultas_da_cidade("Santos", [(2026, 11), (2026, 12)]), [
+            "corrida de rua Santos novembro 2026", "corrida de rua Santos dezembro 2026", "calendário de corridas Santos 2026"])
+
+    def test_triagem_fora_de_sao_paulo_nao_usa_zona(self):
+        c = corrida(nome="Corrida da Lagoa", local="Lagoa do Taquaral", cidade="Campinas")
+        self.assertEqual(triar(c, (), HOJE, FIM, "Campinas", "llm"), ("aprovada", "ok"))
+        self.assertIsNone(c.regiao)
+        # "Moema" é bairro de São Paulo, mas em Campinas não vira zona nem descarta a prova
+        c = corrida(nome="Corrida Moema", local="Rua Moema", cidade="Campinas")
+        self.assertEqual(triar(c, ("zona norte",), HOJE, FIM, "Campinas", "llm"), ("aprovada", "ok"))
+
+    def test_sp_e_capital_so_valem_para_sao_paulo(self):
+        self.assertEqual(triar(corrida(cidade="SP"), ("zona sul",), HOJE, FIM, "São Paulo", "llm")[0], "aprovada")
+        self.assertEqual(triar(corrida(cidade="SP"), (), HOJE, FIM, "Campinas", "llm"), ("descartada", "fora_da_cidade"))
+        self.assertEqual(triar(corrida(cidade="Campinas - SP", local="Taquaral"), (), HOJE, FIM, "Campinas", "llm")[0], "aprovada")
 
 
 class TestCacheBusca(unittest.TestCase):

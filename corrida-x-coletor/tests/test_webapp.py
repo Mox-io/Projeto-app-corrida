@@ -77,6 +77,29 @@ class TestApi(unittest.TestCase):
         js = self.c.post("/api/json", json={"corridas": corridas, "regions": ["zona sul"], "weeks": 8}).json()
         self.assertEqual(js["gerado_em"], "2026-10-15")
 
+    def test_outra_cidade_sem_zona(self):
+        r = self.c.post("/api/queries", json={"city": "campinas", "weeks": 4}).json()
+        self.assertEqual((r["city"], r["location"]), ("Campinas", "Campinas,State of Sao Paulo,Brazil"))
+        self.assertIn("corrida de rua Campinas novembro 2026", r["queries"])
+        # São Paulo continua exigindo zona; cidade repetida exige UF
+        self.assertEqual(self.c.post("/api/queries", json={"city": "São Paulo", "weeks": 4}).status_code, 422)
+        self.assertEqual(self.c.post("/api/queries", json={"city": "Palmas", "weeks": 4}).status_code, 422)
+        self.assertEqual(self.c.post("/api/queries", json={"city": "Palmas", "uf": "TO", "weeks": 4}).status_code, 200)
+        self.assertEqual(self.c.post("/api/queries", json={"city": "Campinas", "uf": "XX", "weeks": 4}).status_code, 422)
+
+    def test_triagem_e_json_por_cidade(self):
+        prova = {"nome": "Corrida do Taquaral", "data": "2026-11-08", "local": "Lagoa do Taquaral", "cidade": "Campinas",
+                 "link_inscricao": "https://www.ticketsports.com.br/e/taquaral", "fonte_url": "https://agenda.example/t",
+                 "origem": "llm"}
+        de_sp = {**prova, "nome": "Corrida da Paulista", "cidade": "São Paulo", "local": "Avenida Paulista"}
+        corpo = {"corridas": [prova, de_sp], "city": "Campinas", "weeks": 8}
+        itens = {i["nome"]: i for i in self.c.post("/api/triage", json=corpo).json()["items"]}
+        self.assertEqual(itens["Corrida do Taquaral"]["situacao"], "aprovada")  # sem zona, e mesmo assim aprovada
+        self.assertEqual(itens["Corrida da Paulista"]["motivo"], "fora_da_cidade")
+        js = self.c.post("/api/json", json=corpo).json()
+        self.assertEqual(js["cidade"], "Campinas")
+        self.assertEqual([(p["cidade"], p["regioes"]) for p in js["provas"]], [("Campinas", [])])
+
     def test_demo_marca_origem(self):
         busca = self.c.post("/api/search", json={"query": "x", "depth": 5, "demo": True, "use_llm": False}).json()
         self.assertEqual(busca["origem"], "demo")

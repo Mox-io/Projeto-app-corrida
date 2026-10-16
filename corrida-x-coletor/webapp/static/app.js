@@ -32,6 +32,7 @@ const estado = {
   itens: [], // provas triadas pelo servidor
   resumo: null,
   demoDados: false, // as provas guardadas são da demonstração?
+  cidadeDados: null, // { city, uf } em que as provas guardadas foram buscadas
   consultasPrevistas: [],
   totalConsultas: 0,
   ocupado: false,
@@ -117,6 +118,7 @@ function salvarSessao() {
       JSON.stringify({
         corridas: estado.corridas,
         demoDados: estado.demoDados,
+        cidadeDados: estado.cidadeDados,
         regioes: [...estado.regioes],
         semanas: $("#f-semanas").value,
       })
@@ -132,6 +134,11 @@ function restaurarSessao() {
     if (!dados || !Array.isArray(dados.corridas)) return;
     estado.corridas = dados.corridas;
     estado.demoDados = Boolean(dados.demoDados);
+    if (dados.cidadeDados?.city) {
+      estado.cidadeDados = { city: String(dados.cidadeDados.city), uf: dados.cidadeDados.uf || null };
+      $("#f-cidade").value = estado.cidadeDados.city;
+      $("#f-uf").value = estado.cidadeDados.uf || "";
+    }
     if (Array.isArray(dados.regioes) && dados.regioes.length) {
       estado.regioes = new Set(dados.regioes.filter((r) => estado.config.regions.includes(r)));
     }
@@ -225,11 +232,26 @@ function lerInteiro(seletor, nome, minimo, maximo) {
   return n;
 }
 
+// São Paulo é a única cidade com zonas (o servidor confere de novo).
+const semAcento = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const ehSaoPaulo = (cidade) => ["sao paulo", "sp", "sao paulo sp"].includes(semAcento(cidade).replace(/\s+/g, " "));
+
+function lerCidade() {
+  const city = $("#f-cidade").value.trim().replace(/\s+/g, " ");
+  if (city.length < 2) throw new Error("Informe a cidade.");
+  const uf = $("#f-uf").value.trim().toUpperCase();
+  if (uf && !/^[A-Z]{2}$/.test(uf)) throw new Error("UF: use a sigla do estado (ex.: SP).");
+  return { city, uf: uf || null };
+}
+
 function lerFiltros() {
   const { limits } = estado.config;
-  if (!estado.regioes.size) throw new Error("Escolha ao menos uma região.");
+  const cidade = lerCidade();
+  const sp = ehSaoPaulo(cidade.city);
+  if (sp && !estado.regioes.size) throw new Error("Escolha ao menos uma zona.");
   return {
-    regions: [...estado.regioes],
+    ...cidade,
+    regions: sp ? [...estado.regioes] : [],
     weeks: lerInteiro("#f-semanas", "Semanas à frente", 1, 52),
     depth: lerInteiro("#f-profundidade", "Resultados por consulta", 1, limits.maxDepth),
     limite: lerInteiro("#f-limite", "Máx. de consultas", 1, limits.maxQueries),
@@ -240,6 +262,10 @@ function lerFiltros() {
 }
 
 function renderRegioes() {
+  let sp = true;
+  try { sp = ehSaoPaulo(lerCidade().city); } catch { /* campo vazio: mantém as zonas à vista */ }
+  $("#campo-regioes").hidden = !sp;
+  $("#dica-cidade").hidden = sp;
   const caixa = $("#regioes");
   caixa.replaceChildren(
     ...estado.config.regions.map((r) => {
@@ -281,7 +307,7 @@ async function atualizarPlano() {
     return;
   }
   try {
-    const dados = await apiJson("/api/queries", { regions: f.regions, weeks: f.weeks, extra: f.extra });
+    const dados = await apiJson("/api/queries", { city: f.city, uf: f.uf, regions: f.regions, weeks: f.weeks, extra: f.extra });
     estado.consultasPrevistas = dados.queries;
     estado.totalConsultas = dados.total;
   } catch (erro) {
@@ -336,13 +362,10 @@ async function iniciarBusca(evento) {
   botao.textContent = "Buscando...";
   definirOcupado(true, "Buscando provas");
   try {
-    let consultas;
-    if (f.demo) {
-      consultas = [(await apiJson("/api/queries", { regions: f.regions, weeks: f.weeks, extra: [] })).demoQuery];
-    } else {
-      const dados = await apiJson("/api/queries", { regions: f.regions, weeks: f.weeks, extra: f.extra });
-      consultas = dados.queries.slice(0, f.limite);
-    }
+    const plano = await apiJson("/api/queries", { city: f.city, uf: f.uf, regions: f.regions, weeks: f.weeks, extra: f.demo ? [] : f.extra });
+    const consultas = f.demo ? [plano.demoQuery] : plano.queries.slice(0, f.limite);
+    f.city = plano.city || f.city; // grafia do servidor: "sao paulo" -> "São Paulo"
+    $("#f-cidade").value = f.city;
 
     const novas = [];
     for (const [i, consulta] of consultas.entries()) {
@@ -352,7 +375,9 @@ async function iniciarBusca(evento) {
       }
       log(`(${i + 1}/${consultas.length}) ${consulta}`);
       try {
-        const dados = await apiJson("/api/search", { query: consulta, depth: f.depth, use_llm: f.useLlm, demo: f.demo });
+        const dados = await apiJson("/api/search", {
+          query: consulta, depth: f.depth, use_llm: f.useLlm, demo: f.demo, city: f.city, uf: f.uf,
+        });
         novas.push(...dados.corridas);
         log(`   ${dados.corridas.length} prova(s)${dados.origem === "heuristica" ? " (regras, sem IA)" : ""}`);
       } catch (erro) {
@@ -362,6 +387,7 @@ async function iniciarBusca(evento) {
     }
     estado.corridas = novas;
     estado.demoDados = f.demo;
+    estado.cidadeDados = { city: f.city, uf: f.uf }; // a triagem usa a cidade em que as provas foram buscadas
     salvarSessao();
     await retriar();
     if (estado.resumo) log(`Pronto: ${estado.resumo.aprovada} aprovada(s), ${estado.resumo.conferir} a conferir.`);
@@ -386,7 +412,7 @@ async function retriar() {
   } catch {
     return; // campo sendo editado: mantém o calendário atual
   }
-  if (!estado.regioes.size) return;
+  if (ehSaoPaulo(cidadeDosDados().city) && !estado.regioes.size) return;
   try {
     const dados = await apiJson("/api/triage", corpoTriagem(semanas));
     estado.itens = dados.items;
@@ -398,10 +424,16 @@ async function retriar() {
   renderTudo();
 }
 
+// Cidade em que as provas guardadas foram buscadas (sessões antigas, sem esse dado, eram de São Paulo).
+const cidadeDosDados = () => estado.cidadeDados || { city: estado.config.defaultCity || "São Paulo", uf: null };
+
 function corpoTriagem(semanas) {
+  const { city, uf } = cidadeDosDados();
   return {
     corridas: estado.corridas,
-    regions: [...estado.regioes],
+    city,
+    uf,
+    regions: ehSaoPaulo(city) ? [...estado.regioes] : [],
     weeks: semanas ?? lerInteiro("#f-semanas", "Semanas à frente", 1, 52),
     demo: estado.demoDados,
   };
@@ -492,7 +524,8 @@ function renderCalendario() {
   $("#info-janela").textContent =
     `Próximas provas de ${dataBR(hoje)} a ${fim.toLocaleDateString("pt-BR")}` +
     (estado.demoDados ? " (data fixa da demonstração)." : ".") +
-    ` Regiões: ${[...estado.regioes].map((x) => NOMES_REGIOES[x] || x).join(", ")}.`;
+    ` Cidade: ${cidadeDosDados().city}` +
+    (ehSaoPaulo(cidadeDosDados().city) ? ` (zonas: ${[...estado.regioes].map((x) => NOMES_REGIOES[x] || x).join(", ")}).` : ".");
 
   const mostrar = { aprovada: true, conferir: $("#mostrar-conferir").checked, descartada: $("#mostrar-descartadas").checked };
   const visiveis = estado.itens.filter((i) => mostrar[i.situacao]);
@@ -537,6 +570,8 @@ function configurarApp() {
 
   $("#form-busca").addEventListener("submit", iniciarBusca);
   for (const id of ["#f-semanas", "#f-profundidade", "#f-limite", "#f-extras"]) $(id).addEventListener("input", aoMudarFiltros);
+  // Trocar a cidade muda o plano (outra busca); o calendário atual continua sendo o da cidade buscada.
+  for (const id of ["#f-cidade", "#f-uf"]) $(id).addEventListener("input", () => { renderRegioes(); aoMudarFiltros(); });
   for (const id of ["#f-llm", "#f-demo"]) $(id).addEventListener("change", () => atualizarPlano());
   $("#mostrar-conferir").addEventListener("change", renderCalendario);
   $("#mostrar-descartadas").addEventListener("change", renderCalendario);
@@ -548,6 +583,7 @@ function configurarApp() {
   $("#btn-json").addEventListener("click", () => baixarArquivo("/api/json", "calendario-corrida-x.json", "#btn-json"));
   $("#btn-limpar").addEventListener("click", () => {
     estado.corridas = [];
+    estado.cidadeDados = null;
     estado.itens = [];
     estado.resumo = null;
     estado.progresso = [];
@@ -582,7 +618,7 @@ async function iniciar() {
     $("#carregando").textContent = "Não foi possível falar com o servidor. Recarregue a página.";
     return;
   }
-  $("#cidade").textContent = `· coletor de corridas de ${estado.config.city}`;
+  $("#cidade").textContent = "· coletor de corridas de rua";
   $("#carregando").hidden = true;
 
   if (estado.config.authMode === "firebase") await iniciarFirebase(estado.config.firebase);

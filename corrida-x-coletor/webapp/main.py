@@ -31,11 +31,14 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+import dataclasses
+
 from corridax.aisa_client import AisaClient, AisaError
+from corridax.cidades import CIDADE_PADRAO, eh_sao_paulo, local_da_busca
 from corridax.coleta import buscar_consulta, meses_da_janela, resumo_por_situacao, triar_todas
 from corridax.config import Config
 from corridax.demo_data import CONSULTA_DEMO, HOJE_DEMO, ClienteDemo
-from corridax.regioes import REGIOES, consultas_da_regiao
+from corridax.regioes import REGIOES, consultas_da_cidade, consultas_da_regiao
 from corridax.relatorio import calendario_json, csv_bytes
 
 from .auth import criar_verificador_firebase, obter_usuario
@@ -88,6 +91,26 @@ def criar_app(
     def dia(demo: bool) -> date:
         return HOJE_DEMO if demo else hoje()
 
+    def da_cidade_sem_zona(pedido) -> Config:
+        """Config da cidade do pedido: São Paulo usa SEARCH_LOCATION do .env; as outras cidades,
+        a localização exata do Google (dados/locais_busca_br.json)."""
+        if eh_sao_paulo(pedido.city) and not pedido.uf:
+            return dataclasses.replace(cfg, city_name=CIDADE_PADRAO)
+        try:
+            local = local_da_busca(pedido.city, pedido.uf)
+        except ValueError as erro:
+            raise HTTPException(422, str(erro)) from None
+        return dataclasses.replace(cfg, city_name=pedido.city, search_location=local)
+
+    def da_cidade(pedido) -> tuple[Config, tuple[str, ...]]:
+        """Config e zonas do pedido: São Paulo exige ao menos uma zona; as outras cidades não têm zona."""
+        cfg_c = da_cidade_sem_zona(pedido)
+        if not eh_sao_paulo(pedido.city):
+            return cfg_c, ()
+        if not pedido.regions:
+            raise HTTPException(422, f"Escolha ao menos uma zona de {CIDADE_PADRAO}.")
+        return cfg_c, tuple(pedido.regions)
+
     @app.middleware("http")
     async def cabecalhos_de_seguranca(request: Request, call_next):
         resposta = await call_next(request)
@@ -107,6 +130,7 @@ def criar_app(
             "firebase": settings.firebase_public(),
             "hasApiKey": bool(cfg.api_key),
             "city": cfg.city_name,
+            "defaultCity": CIDADE_PADRAO,
             "regions": list(REGIOES),
             "today": hoje().isoformat(),
             "demoToday": HOJE_DEMO.isoformat(),
@@ -120,19 +144,25 @@ def criar_app(
 
     @app.post("/api/queries")
     def consultas(pedido: PedidoConsultas, usuario: str = Depends(obter_usuario)):
+        cfg_c, regioes = da_cidade(pedido)
         meses = meses_da_janela(hoje(), pedido.weeks)
-        termos = [c for r in pedido.regions for c in consultas_da_regiao(r, meses, cfg.city_name)]
+        if regioes:
+            termos = [c for r in regioes for c in consultas_da_regiao(r, meses, cfg_c.city_name)]
+        else:
+            termos = consultas_da_cidade(cfg_c.city_name, meses)
         termos = list(dict.fromkeys(termos + pedido.extra))
-        return {"queries": termos[: settings.max_queries], "total": len(termos), "demoQuery": CONSULTA_DEMO}
+        return {"queries": termos[: settings.max_queries], "total": len(termos), "demoQuery": CONSULTA_DEMO,
+                "city": cfg_c.city_name, "location": cfg_c.search_location}
 
     @app.post("/api/search")
     def buscar(pedido: PedidoBusca, usuario: str = Depends(obter_usuario)):
         if pedido.depth > settings.max_depth:
             raise HTTPException(422, f"A profundidade máxima é {settings.max_depth}.")
         cliente = ClienteDemo() if pedido.demo else cliente_aisa()
+        cfg_c = da_cidade_sem_zona(pedido)
         try:
             corridas, origem = buscar_consulta(
-                cliente, cfg, pedido.query, pedido.depth, dia(pedido.demo), usar_llm=pedido.use_llm or pedido.demo
+                cliente, cfg_c, pedido.query, pedido.depth, dia(pedido.demo), usar_llm=pedido.use_llm or pedido.demo
             )
         except AisaError as erro:
             raise erro_da_aisa(erro) from None
@@ -141,8 +171,9 @@ def criar_app(
         return {"corridas": [corrida_para_json(c, pedido.query, origem) for c in corridas], "origem": origem}
 
     def _triar(pedido: PedidoTriagem):
+        cfg_c, regioes = da_cidade(pedido)
         encontradas = [(c.para_corrida(), c.consulta, c.origem) for c in pedido.corridas]
-        return triar_todas(encontradas, cfg, tuple(pedido.regions), dia(pedido.demo), pedido.weeks)
+        return triar_todas(encontradas, cfg_c, regioes, dia(pedido.demo), pedido.weeks)
 
     @app.post("/api/triage")
     def triagem(pedido: PedidoTriagem, usuario: str = Depends(obter_usuario)):
@@ -159,7 +190,7 @@ def criar_app(
 
     @app.post("/api/json")
     def baixar_json(pedido: PedidoTriagem, usuario: str = Depends(obter_usuario)):
-        conteudo = calendario_json(_triar(pedido), dia(pedido.demo).isoformat(), cfg.city_name)
+        conteudo = calendario_json(_triar(pedido), dia(pedido.demo).isoformat(), da_cidade(pedido)[0].city_name)
         return Response(
             json.dumps(conteudo, ensure_ascii=False, indent=2).encode("utf-8"),
             media_type="application/json; charset=utf-8",

@@ -177,3 +177,13 @@ def consultas_da_regiao(regiao: str, meses: list[tuple[int, int]], cidade: str =
             termos.append(f"corrida {local} {ano} inscrições")
     # Remove repetidos mantendo a ordem.
     return list(dict.fromkeys(termos))
+
+
+def consultas_da_cidade(cidade: str, meses: list[tuple[int, int]]) -> list[str]:
+    """Termos para uma cidade sem divisão em zonas: um por mês da janela + um de calendário por ano.
+
+    Ex.: Campinas, [(2026, 11)] -> "corrida de rua Campinas novembro 2026", "calendário de corridas Campinas 2026".
+    """
+    termos = [f"corrida de rua {cidade} {_MESES[m - 1]} {a}" for a, m in meses]
+    termos += [f"calendário de corridas {cidade} {a}" for a in sorted({a for a, _ in meses})]
+    return list(dict.fromkeys(termos))

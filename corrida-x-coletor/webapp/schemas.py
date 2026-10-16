@@ -13,6 +13,7 @@ from datetime import date
 
 from pydantic import BaseModel, Field, field_validator
 
+from corridax.cidades import CIDADE_PADRAO, nome_da_cidade, validar_uf
 from corridax.coleta import MOTIVOS_LEGIVEIS
 from corridax.models import Corrida, Item
 from corridax.regioes import validar_regiao
@@ -28,8 +29,25 @@ def _regioes(valores: list[str]) -> list[str]:
         raise ValueError(str(erro)) from None
 
 
-class PedidoConsultas(BaseModel):
-    regions: list[str] = Field(min_length=1, max_length=5)
+class _ComCidade(BaseModel):
+    """Cidade do calendário. São Paulo usa zonas (regions); as outras cidades, não."""
+
+    city: str = CIDADE_PADRAO
+    uf: str | None = None
+
+    @field_validator("city")
+    @classmethod
+    def _cidade(cls, v: str) -> str:
+        return nome_da_cidade(v)
+
+    @field_validator("uf")
+    @classmethod
+    def _uf(cls, v: str | None) -> str | None:
+        return validar_uf(v or None)
+
+
+class PedidoConsultas(_ComCidade):
+    regions: list[str] = Field(default_factory=list, max_length=5)
     weeks: int = Field(ge=1, le=52)
     extra: list[str] = Field(default_factory=list, max_length=10)
 
@@ -47,7 +65,7 @@ class PedidoConsultas(BaseModel):
         return [t for t in limpos if t]
 
 
-class PedidoBusca(BaseModel):
+class PedidoBusca(_ComCidade):
     query: str = Field(min_length=1)
     depth: int = Field(ge=1, le=200)
     use_llm: bool = True
@@ -122,9 +140,9 @@ class CorridaEntrada(BaseModel):
         return Corrida(**dados)
 
 
-class PedidoTriagem(BaseModel):
+class PedidoTriagem(_ComCidade):
     corridas: list[CorridaEntrada] = Field(max_length=MAX_PROVAS)
-    regions: list[str] = Field(min_length=1, max_length=5)
+    regions: list[str] = Field(default_factory=list, max_length=5)
     weeks: int = Field(ge=1, le=52)
     demo: bool = False
 

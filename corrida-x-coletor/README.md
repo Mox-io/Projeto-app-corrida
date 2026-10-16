@@ -6,7 +6,7 @@ Este repositório tem as duas partes do piloto:
 - **App do corredor** ([`corredor/`](corredor/README.md)): o que o corredor usa. Calendário por região com temáticas e noturnas, "Vou correr" com os amigos, seguir corredores, treinos (manual ou GPX), grupos com ranking de km, parceiros por região e uma área de administração para publicar o `calendario.json` do coletor e marcar provas em destaque.
 
 
-Ferramenta da **fase 1 do projeto piloto Corrida X** (planilha-piloto): pesquisa corridas de rua por região de São Paulo e monta o calendário das próximas semanas, com fonte e link oficial de cada prova. Usa a mesma arquitetura do **Prospector** (mesma chave da AIsa, mesmo login Firebase, mesmo jeito de publicar na Vercel) e existe nas mesmas duas formas: **linha de comando** e **app web**.
+Ferramenta da **fase 1 do projeto piloto Corrida X** (planilha-piloto): pesquisa corridas de rua de uma cidade (em São Paulo, por zona) e monta o calendário das próximas semanas, com fonte e link oficial de cada prova. Usa a mesma arquitetura do **Prospector** (mesma chave da AIsa, mesmo login Firebase, mesmo jeito de publicar na Vercel) e existe nas mesmas duas formas: **linha de comando** e **app web**.
 
 O agente faz, sozinho, este fluxo:
 
@@ -36,7 +36,7 @@ As descartadas continuam na planilha com o motivo, para dar para auditar (igual 
 - Busca: `POST /apis/v1/dataforseo/serp/google/organic/live/advanced` (listada no catálogo da AIsa). Existe também a rota de **Google Events**, mas o DataForSEO informa que ela só funciona em inglês, então não foi usada.
 - LLM: `POST /v1/chat/completions`, igual ao Prospector.
 
-> O programa foi testado com respostas simuladas (testes automáticos) e com o modo demonstração. **Ainda não rodou com uma chave real.** Na primeira vez, use `--listar-consultas` (sem custo) e depois uma única consulta (`--limite-consultas 1`) para conferir se o formato das respostas bate com o esperado.
+> Já rodou com chave real (outubro/2026): a busca e a IA funcionam no formato esperado. Na conta de **avaliação** da AIsa só alguns modelos ficam liberados (ex.: `qwen-flash`); o `gpt-4.1-mini` exige saldo pago. Modelos que "pensam" antes de responder (ex.: `deepseek-v4.1-flash`) podem devolver resposta vazia. A busca do Google às vezes falha com o erro 40101 do provedor; é passageiro, rode de novo.
 
 ## Testar sem chave e sem custo (modo demonstração)
 
@@ -71,7 +71,9 @@ O programa mostra o plano (consultas e custo) e pergunta `Continuar? [s/N]`; `--
 
 | Quero... | Como |
 |---|---|
-| Outras regiões | repita `-r`: `-r sul -r oeste` (aceita `zona sul`, `sul`, `centro`...) |
+| Outra cidade | `--cidade Campinas` (busca a cidade toda, sem zonas) |
+| Cidade com nome repetido | `--cidade Palmas --uf TO` (o programa avisa quando precisa da UF) |
+| Outras zonas (São Paulo) | repita `-r`: `-r sul -r oeste` (aceita `zona sul`, `sul`, `centro`...) |
 | Um termo meu | `-q "corrida noturna São Paulo novembro"` (soma aos da região) |
 | Só os meus termos | `-q "..." --so-consultas` |
 | Mais semanas | `--semanas 12` |
@@ -80,6 +82,8 @@ O programa mostra o plano (consultas e custo) e pergunta `Continuar? [s/N]`; `--
 | Buscar de novo no Google | `--sem-cache` (ignora a busca guardada) |
 
 Resultados em `output\<data-hora>\calendario.csv` (separado por `;`, abre direto no Excel) e `calendario.json`.
+
+**Outras cidades:** São Paulo é a padrão e a única dividida em zonas. Em outra cidade, as consultas são por mês ("corrida de rua Campinas novembro 2026") e uma de calendário do ano; a triagem não exige zona (aprovada = data na janela, mesma cidade e link oficial). A busca no Google usa a localização exata da cidade, tirada de `corridax/dados/locais_busca_br.json` (1.304 cidades, gerado da lista gratuita de localizações do DataForSEO). Cidade fora da lista: usa o estado (com `--uf`) ou o Brasil, e o nome da cidade na consulta mantém a busca focada. No app web do coletor, os campos **Cidade** e **UF** ficam acima das zonas.
 
 **Buscas guardadas:** cada busca paga no Google fica em `output\buscas-guardadas\` por 24 horas, gravada antes de chamar a IA. Se a IA falhar (sem saldo, modelo indisponível, resposta fora do formato), rode o mesmo comando de novo: o plano mostra a busca como já guardada e só a IA é chamada.
 

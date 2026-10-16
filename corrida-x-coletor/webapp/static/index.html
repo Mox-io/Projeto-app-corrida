@@ -46,10 +46,28 @@
       <section class="painel">
         <h2>1. Buscar provas</h2>
         <form id="form-busca" novalidate>
-          <div class="campo">
-            <span class="rotulo" id="rotulo-regioes">Regiões de São Paulo</span>
+          <div class="grade">
+            <div class="campo">
+              <label for="f-cidade">Cidade</label>
+              <input id="f-cidade" type="text" maxlength="60" list="cidades-sugeridas" value="São Paulo" autocomplete="off" />
+              <datalist id="cidades-sugeridas">
+                <option value="São Paulo"></option><option value="Campinas"></option><option value="Santos"></option>
+                <option value="São José dos Campos"></option><option value="Sorocaba"></option><option value="Ribeirão Preto"></option>
+                <option value="Jundiaí"></option><option value="Rio de Janeiro"></option><option value="Belo Horizonte"></option>
+                <option value="Curitiba"></option><option value="Porto Alegre"></option><option value="Brasília"></option>
+              </datalist>
+            </div>
+            <div class="campo">
+              <label for="f-uf">UF (opcional)</label>
+              <input id="f-uf" type="text" maxlength="2" placeholder="ex.: SP" autocapitalize="characters" />
+            </div>
+          </div>
+
+          <div class="campo" id="campo-regioes">
+            <span class="rotulo" id="rotulo-regioes">Zonas de São Paulo</span>
             <div class="chips chips--alternar" id="regioes" role="group" aria-labelledby="rotulo-regioes"></div>
           </div>
+          <p class="dica" id="dica-cidade" hidden>Fora de São Paulo a busca é da cidade toda (sem zonas).</p>
 
           <div class="grade">
             <div class="campo">

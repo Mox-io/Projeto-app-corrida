@@ -15,6 +15,7 @@ from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 from .aisa_client import AisaClient
+from .cidades import eh_sao_paulo
 from .config import Config
 from .extracao import extrair_corridas, interpretar_resultados
 from .models import Corrida, Item
@@ -55,7 +56,9 @@ def _mesma_cidade(cidade: str | None, alvo: str) -> bool:
     if not cidade:
         return True  # sem cidade no texto: não descarta por isso
     c, a = normalizar(cidade), normalizar(alvo)
-    return c == a or c in (f"{a} sp", "sp", "sao paulo sp", "capital", "sao paulo capital") or c.startswith(a + " ")
+    if eh_sao_paulo(alvo) and c in ("sp", "capital", "sao paulo capital"):
+        return True  # "SP" e "capital" só querem dizer a cidade quando ela é São Paulo
+    return c == a or c.startswith(a + " ")  # "Campinas SP", "Campinas - SP"
 
 
 def fim_da_janela(hoje: date, semanas: int) -> date:
@@ -69,8 +72,9 @@ def triar(
 
     A ordem importa: primeiro os descartes definitivos, depois o que só pede conferência.
     """
-    regioes, rotulo = classificar(corrida.local, corrida.nome)
-    corrida.regiao = rotulo or "A confirmar"
+    tem_zonas = eh_sao_paulo(cidade)  # fora de São Paulo não há zonas: a prova é da cidade toda
+    regioes, rotulo = classificar(corrida.local, corrida.nome) if tem_zonas else ((), None)
+    corrida.regiao = (rotulo or "A confirmar") if tem_zonas else None
 
     if not corrida.data:
         return "descartada", "sem_data"
@@ -83,9 +87,9 @@ def triar(
         return "descartada", "nao_e_corrida"
     if not _mesma_cidade(corrida.cidade, cidade):
         return "descartada", "fora_da_cidade"
-    if regioes and regioes_alvo and not set(regioes) & set(regioes_alvo):
+    if tem_zonas and regioes and regioes_alvo and not set(regioes) & set(regioes_alvo):
         return "descartada", "fora_da_regiao"
-    if not regioes:
+    if tem_zonas and not regioes:
         return "conferir", "regiao_a_confirmar"
     if not corrida.link_inscricao:
         return "conferir", "sem_link_oficial"
