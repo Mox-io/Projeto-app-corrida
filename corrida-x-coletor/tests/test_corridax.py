@@ -110,6 +110,14 @@ class TestAisa(unittest.TestCase):
         with self.assertRaises(AisaError):
             extrair_itens({"tasks": [{"status_code": 40501, "status_message": "Invalid Field"}]})
 
+    def test_resultado_parcial_e_aproveitado(self):
+        item = {"type": "organic", "title": "Corrida", "url": "https://a.example/x"}
+        with self.assertLogs("corridax.aisa_client", level="WARNING"):
+            itens = extrair_itens({"tasks": [{"status_code": 40106, "result": [{"items": [item]}]}]})
+        self.assertEqual(itens, [item])
+        with self.assertRaises(AisaError):  # parcial e vazio: não há o que aproveitar
+            extrair_itens({"tasks": [{"status_code": 40106, "status_message": "partial", "result": None}]})
+
 
 class TestExtracao(unittest.TestCase):
     def setUp(self):

@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 # (segundos para conectar, segundos para receber a resposta). A busca "live" do Google
 # pode demorar, por isso a leitura tem um prazo generoso.
 TIMEOUT = (10, 90)
+PARCIAL = 40106  # DataForSEO: "Task completed with partial results"
 
 
 class AisaError(Exception):
@@ -132,7 +133,8 @@ class AisaClient:
 def extrair_itens(dados: dict) -> list[dict]:
     """Abre o "envelope" do DataForSEO: tasks[0].result[0].items.
 
-    Códigos 20000 = sucesso. Qualquer outro vira um erro legível.
+    Códigos 20000 = sucesso; 40106 = resultado parcial (algumas páginas do Google não vieram; as que
+    vieram já foram cobradas), que é aproveitado com um aviso. Qualquer outro vira um erro legível.
     """
     codigo = dados.get("status_code")
     if codigo not in (None, 20000):
@@ -143,10 +145,12 @@ def extrair_itens(dados: dict) -> list[dict]:
         raise AisaError("Resposta da busca sem a lista 'tasks'.")
     tarefa = tarefas[0]
     codigo_tarefa = tarefa.get("status_code")
-    if codigo_tarefa not in (None, 20000):
+    resultados = tarefa.get("result") or []
+    if codigo_tarefa == PARCIAL and resultados:
+        log.warning("  Busca com resultado parcial (o provedor não trouxe todas as páginas); usando o que veio.")
+    elif codigo_tarefa not in (None, 20000):
         raise AisaError(f"Busca recusada: {tarefa.get('status_message', 'sem detalhe')} (código {codigo_tarefa}).")
 
-    resultados = tarefa.get("result") or []
     if not resultados or not isinstance(resultados[0], dict):
         return []  # busca válida, mas sem resultados
     return [item for item in (resultados[0].get("items") or []) if isinstance(item, dict)]
