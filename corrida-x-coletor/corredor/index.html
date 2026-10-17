@@ -153,6 +153,19 @@ table.ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
          padding: 10px 16px; border-radius: 999px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
 .voltar { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 6px 0; font-size: 14px; }
 details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 500; }
+
+/* Strava: botão na cor da marca (diretrizes do Strava) e gráfico simples de km por semana */
+.btn-strava { background: #fc5200; color: #fff; border: 0; border-radius: 8px; padding: 11px 18px; font-size: 15px; font-weight: 700;
+              cursor: pointer; min-height: 44px; }
+.btn-strava:hover { background: #e34a00; }
+.powered-strava { text-align: right; margin-top: 12px; }
+.powered-strava b { color: #fc5200; }
+.barras { display: flex; align-items: flex-end; gap: 6px; height: 130px; padding-top: 4px; }
+.barra { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.barra-col { width: 100%; max-width: 36px; background: var(--accent); border-radius: 4px 4px 0 0; }
+.barra:last-child .barra-col { background: #fc5200; }
+.barra-valor { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.barra-rotulo { font-size: 11px; color: var(--muted); margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -204,6 +217,13 @@ const CIDADE = "São Paulo"; // cidade padrão (a do coletor) e, por enquanto, a
 const CIDADES_SUGERIDAS = ["São Paulo", "Campinas", "Santos", "São José dos Campos", "Sorocaba", "Ribeirão Preto",
   "Jundiaí", "Rio de Janeiro", "Belo Horizonte", "Curitiba", "Porto Alegre", "Brasília"];
 const FIREBASE_VERSAO = "10.13.0";
+
+// Conexão com o Strava (opcional). Os dados do Strava são lidos na hora, direto do Strava, e mostrados
+// SÓ para o atleta que conectou (regra do acordo de API do Strava); nada vai para o feed nem para o ranking.
+// STRAVA_API é o servidor da pasta strava-api/ (Vercel), que guarda o Client Secret. Vazio = conexão desligada.
+const STRAVA_CLIENT_ID = "288160";
+const STRAVA_API = "";
+const STRAVA_ESCOPOS = "read,activity:read_all,profile:read_all";
 
 const REGIOES = ["zona sul", "zona norte", "zona leste", "zona oeste", "centro"];
 const NOME_REGIAO = { "zona sul": "Zona sul", "zona norte": "Zona norte", "zona leste": "Zona leste", "zona oeste": "Zona oeste", centro: "Centro" };
@@ -433,6 +453,11 @@ class StoreDemo {
     this.zerar();
     this.aoMudar(null);
   }
+
+  // A demonstração não conecta o Strava (precisa de login real).
+  async stravaLer() { return null; }
+  async stravaSalvar() {}
+  async stravaApagar() {}
   semente() {
     const pessoas = {
       "demo-ana": { nome: "Ana Lima", handle: "ana.corre", regiao: "zona sul", distancias: ["10", "meia"], instagram: "" },
@@ -835,11 +860,20 @@ class StoreFirebase {
   async salvarParceiro(p) { await this.F.addDoc(this.col("parceiros"), validarParceiro(p)); }
   async removerParceiro(id) { await this.F.deleteDoc(this.ref("parceiros", id)); }
 
+  // Chaves do Strava da pessoa (strava/{uid}): só ela lê e escreve (firestore.rules). Nada de atividades aqui.
+  async stravaLer() {
+    const s = await this.F.getDoc(this.ref("strava", this.uid));
+    return s.exists() ? s.data() : null;
+  }
+  async stravaSalvar(dados) { await this.F.setDoc(this.ref("strava", this.uid), dados); }
+  async stravaApagar() { await this.F.deleteDoc(this.ref("strava", this.uid)); }
+
   // LGPD: apaga tudo o que é da pessoa e, por último, o login. Grupos que ela criou são apagados;
   // nos outros, ela só sai. As regras do Firestore permitem cada uma dessas exclusões.
   async excluirConta() {
     const { query, where, writeBatch } = this.F;
     const uid = this.uid;
+    await Strava.desconectar().catch(() => {}); // revoga o acesso no Strava e apaga as chaves guardadas
     for (const g of await this.meusGrupos()) await this.sairGrupo(g.id);
     const consultas = [["confirmacoes", "uid"], ["treinos", "uid"], ["follows", "seguidor"], ["follows", "alvo"]];
     const docs = (await Promise.all(consultas.map(([c, campo]) => this.F.getDocs(query(this.col(c), where(campo, "==", uid))))))
@@ -1002,7 +1036,7 @@ function telaPerfil(primeiraVez = false) {
     el("button", { type: "button", class: "btn btn--perigo btn--cheio", onclick: (e) => executar(e.currentTarget, () => estado.store.sair()) }, "Sair"),
     el("details", { class: "mais", style: "margin-top:14px" },
       el("summary", {}, "Privacidade e exclusão da conta"),
-      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas, treinos, quem você segue e quem segue você, ",
+      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas, treinos, quem você segue e quem segue você, a conexão com o Strava, ",
         "e tira você dos grupos (os que você criou são apagados). Não dá para desfazer. ",
         el("a", { href: "privacidade.html" }, "Política de privacidade")),
       el("button", {
@@ -1266,6 +1300,207 @@ async function telaAtividade() {
       seguindo.length ? Object.values(pessoas).map((p) => linhaPessoa(p)) : el("p", { class: "dica" }, "Você ainda não segue ninguém.")));
 }
 
+// ---------- Strava (só o próprio atleta vê) ----------
+// Login: o Strava devolve ?strava=1&code=...&state=...&scope=... para esta página; o servidor (STRAVA_API)
+// troca o código pelas chaves, que ficam em strava/{uid}. Os dados são buscados na hora e não são guardados.
+const Strava = {
+  ligado: () => Boolean(STRAVA_API) && !estado.demo,
+
+  conectar() {
+    const estadoLogin = codigoAleatorio();
+    try { sessionStorage.setItem("ritmex-strava-state", estadoLogin); } catch { /* sem armazenamento: o retorno vai falhar com aviso */ }
+    const volta = `${location.origin}${location.pathname}?strava=1`;
+    location.href = "https://www.strava.com/oauth/authorize?" + new URLSearchParams({
+      client_id: STRAVA_CLIENT_ID, redirect_uri: volta, response_type: "code", approval_prompt: "auto",
+      scope: STRAVA_ESCOPOS, state: estadoLogin,
+    });
+  },
+
+  // Chamado depois do login no Ritmex. Devolve true se havia um retorno do Strava para tratar.
+  async concluirRetorno() {
+    const p = new URLSearchParams(location.search);
+    if (!p.has("strava")) return false;
+    history.replaceState(null, "", location.pathname); // tira o código da barra de endereço
+    let esperado = null;
+    try { esperado = sessionStorage.getItem("ritmex-strava-state"); sessionStorage.removeItem("ritmex-strava-state"); } catch { /* ignora */ }
+    if (p.get("error")) { toast("Conexão com o Strava cancelada."); return true; }
+    if (!p.get("code") || !esperado || p.get("state") !== esperado) { toast("Não foi possível confirmar a conexão com o Strava. Tente de novo."); return true; }
+    const escopos = (p.get("scope") || "").split(",");
+    if (!escopos.some((e) => e.startsWith("activity:read"))) {
+      toast("Para ver suas corridas, autorize o acesso às atividades no Strava.");
+      return true;
+    }
+    const chaves = await Strava.servidor("token", { code: p.get("code") });
+    await estado.store.stravaSalvar(Strava.paraGuardar(chaves, escopos.join(",")));
+    toast("Strava conectado! Só você vê esses dados.");
+    return true;
+  },
+
+  paraGuardar(chaves, escopo, anterior = {}) {
+    const a = chaves.athlete || {};
+    return {
+      atletaId: a.id ?? anterior.atletaId ?? null,
+      nome: [a.firstname, a.lastname].filter(Boolean).join(" ") || anterior.nome || "",
+      foto: (a.profile_medium && /^https:\/\//.test(a.profile_medium)) ? a.profile_medium : (anterior.foto || null),
+      escopo: escopo ?? anterior.escopo ?? "",
+      accessToken: chaves.access_token,
+      refreshToken: chaves.refresh_token,
+      expiraEm: Number(chaves.expires_at) || 0,
+      conectadoEm: anterior.conectadoEm || new Date().toISOString(),
+    };
+  },
+
+  async servidor(acao, corpo) {
+    let resposta;
+    try {
+      resposta = await fetch(`${STRAVA_API}/api/${acao}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+    } catch {
+      throw new Error("Não foi possível falar com o servidor do Ritmex. Tente de novo.");
+    }
+    const dados = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) throw new Error(dados.erro || "Falha na conexão com o Strava.");
+    return dados;
+  },
+
+  // Chave de acesso válida (a do Strava vence a cada 6 horas; renova pelo servidor).
+  async chave() {
+    const dados = await estado.store.stravaLer();
+    if (!dados) return null;
+    if (dados.expiraEm - 120 > Date.now() / 1000) return dados;
+    const novas = await Strava.servidor("refresh", { refresh_token: dados.refreshToken });
+    const atual = Strava.paraGuardar(novas, undefined, dados);
+    await estado.store.stravaSalvar(atual);
+    return atual;
+  },
+
+  async api(caminho, chave) {
+    const r = await fetch(`https://www.strava.com/api/v3${caminho}`, { headers: { Authorization: `Bearer ${chave.accessToken}` } });
+    if (r.status === 401) throw Object.assign(new Error("O Strava não aceitou mais o acesso. Conecte de novo."), { reconectar: true });
+    if (r.status === 429) throw new Error("Muitos pedidos ao Strava agora. Tente de novo em alguns minutos.");
+    if (!r.ok) throw new Error(`O Strava respondeu com erro ${r.status}.`);
+    return r.json();
+  },
+
+  // Tudo o que o painel mostra, buscado agora (nada é guardado).
+  async resumo() {
+    const chave = await Strava.chave();
+    if (!chave) return null;
+    const oitoSemanas = Math.floor(Date.now() / 1000) - 56 * 86400;
+    const [atleta, atividades] = await Promise.all([
+      Strava.api("/athlete", chave),
+      Strava.api(`/athlete/activities?after=${oitoSemanas}&per_page=100`, chave),
+    ]);
+    const stats = atleta?.id ? await Strava.api(`/athletes/${atleta.id}/stats`, chave) : null;
+    const corridas = (Array.isArray(atividades) ? atividades : [])
+      .filter((a) => ["Run", "TrailRun", "VirtualRun"].includes(a.sport_type || a.type))
+      .sort((a, b) => String(b.start_date_local).localeCompare(String(a.start_date_local)));
+    return { chave, atleta, stats, corridas };
+  },
+
+  async desconectar() {
+    const chave = await Strava.chave().catch(() => null);
+    if (chave && STRAVA_API) await Strava.servidor("desconectar", { access_token: chave.accessToken }).catch(() => {});
+    await estado.store.stravaApagar();
+  },
+};
+
+function codigoAleatorio() {
+  const v = new Uint32Array(4);
+  crypto.getRandomValues(v);
+  return [...v].map((n) => n.toString(36)).join("");
+}
+
+// Ritmo em min/km a partir de segundos e metros: "5:12 /km".
+function ritmoDe(segundos, metros) {
+  if (!(segundos > 0 && metros > 0)) return null;
+  const s = Math.round(segundos / (metros / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} /km`;
+}
+const duracao = (s) => (s >= 3600 ? `${Math.floor(s / 3600)}h${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}` : `${Math.round(s / 60)} min`);
+
+function seloStrava() {
+  return el("p", { class: "dica powered-strava" }, "Dados do ", el("b", {}, "Strava"), " · visíveis só para você");
+}
+
+// Painel da aba Treinos. Monta um esqueleto na hora e preenche quando o Strava responder.
+function painelStrava() {
+  if (!STRAVA_API && !estado.demo) return null;
+  const caixa = el("section", { class: "painel" }, el("h2", {}, "Seu Strava"), el("p", { class: "carregando" }, "Carregando..."));
+  const corpo = (...filhos) => caixa.replaceChildren(el("h2", {}, "Seu Strava"), ...filhos.flat(Infinity).filter(Boolean));
+  const botaoConectar = () => el("button", { type: "button", class: "btn-strava", onclick: () => Strava.conectar() }, "Conectar com Strava");
+
+  if (estado.demo) {
+    corpo(el("p", { class: "dica" }, "Na versão real, você conecta o seu Strava e vê aqui suas estatísticas, km por semana, últimas corridas com ritmo e frequência cardíaca, e a quilometragem dos seus tênis. Só você vê esses dados."));
+    return caixa;
+  }
+
+  (async () => {
+    let r;
+    try {
+      r = await Strava.resumo();
+    } catch (erro) {
+      corpo(el("p", { class: "erro" }, erro.message), erro.reconectar ? botaoConectar() : null);
+      return;
+    }
+    if (!r) {
+      corpo(el("p", { class: "dica" }, "Conecte o seu Strava para ver aqui suas estatísticas e corridas. Só você vê esses dados: nada vai para o feed nem para o ranking, e nada é guardado no Ritmex."), botaoConectar());
+      return;
+    }
+    const { atleta, stats, corridas } = r;
+    const total = (t) => (t && typeof t === "object" ? t : { distance: 0, count: 0, moving_time: 0 });
+    const recente = total(stats?.recent_run_totals), ano = total(stats?.ytd_run_totals), sempre = total(stats?.all_run_totals);
+
+    // km por semana (últimas 8 semanas, da mais antiga para a atual)
+    const agora = Date.now();
+    const semanas = Array.from({ length: 8 }, (_, i) => ({ fim: agora - i * 7 * 86400000, km: 0 })).reverse();
+    for (const c of corridas) {
+      const quando = Date.parse(c.start_date);
+      const s = semanas.find((x) => quando <= x.fim && quando > x.fim - 7 * 86400000);
+      if (s) s.km += c.distance / 1000;
+    }
+    const maior = Math.max(1, ...semanas.map((s) => s.km));
+    const quatro = corridas.filter((c) => Date.parse(c.start_date) > agora - 28 * 86400000);
+    const ritmo4 = ritmoDe(quatro.reduce((s, c) => s + c.moving_time, 0), quatro.reduce((s, c) => s + c.distance, 0));
+
+    const sair = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, "Desconectar");
+    sair.addEventListener("click", () => {
+      if (!confirmarAcao(sair, "Toque de novo para desconectar")) return;
+      executar(sair, async () => { await Strava.desconectar(); toast("Strava desconectado."); irPara("treinos"); });
+    });
+
+    corpo(
+      el("div", { class: "pessoa" }, avatar({ nome: atleta?.firstname || "", foto: r.chave.foto }), el("div", { class: "info" },
+        el("b", {}, [atleta?.firstname, atleta?.lastname].filter(Boolean).join(" ") || "Atleta"), el("span", {}, "Conectado ao Strava")), sair),
+      el("div", { class: "numeros", style: "margin-top:12px" },
+        el("div", { class: "numero" }, el("b", {}, km(recente.distance / 1000)), el("span", {}, `4 semanas · ${recente.count} corridas`)),
+        el("div", { class: "numero" }, el("b", {}, ritmo4 || "—"), el("span", {}, "ritmo médio (4 sem.)")),
+        el("div", { class: "numero" }, el("b", {}, km(ano.distance / 1000)), el("span", {}, `no ano · ${ano.count} corridas`)),
+        el("div", { class: "numero" }, el("b", {}, km(sempre.distance / 1000)), el("span", {}, `desde sempre · ${duracao(sempre.moving_time)}`))),
+      el("p", { class: "dica" }, "Os totais vêm do Strava e contam só as atividades públicas; as semanas e as corridas abaixo incluem as privadas."),
+      el("h3", {}, "Km por semana"),
+      el("div", { class: "barras", role: "img", "aria-label": `Km por semana: ${semanas.map((s) => Math.round(s.km)).join(", ")}` },
+        semanas.map((s, i) => el("div", { class: "barra" },
+          el("span", { class: "barra-valor" }, String(Math.round(s.km))),
+          el("div", { class: "barra-col", style: `height:${Math.max(3, Math.round((s.km / maior) * 100))}%` }),
+          el("span", { class: "barra-rotulo" }, i === semanas.length - 1 ? "atual" : `-${semanas.length - 1 - i}`)))),
+      el("h3", {}, "Últimas corridas"),
+      corridas.length ? corridas.slice(0, 8).map((c) => el("div", { class: "pessoa" }, el("div", { class: "info" },
+        el("b", {}, `${km(c.distance / 1000)} · ${c.name || "Corrida"}`),
+        el("span", {}, [dataBR(String(c.start_date_local).slice(0, 10)), duracao(c.moving_time), ritmoDe(c.moving_time, c.distance),
+          c.average_heartrate ? `FC ${Math.round(c.average_heartrate)}` : null,
+          c.total_elevation_gain ? `+${Math.round(c.total_elevation_gain)} m` : null].filter(Boolean).join(" · "))),
+        linkSeguro(`https://www.strava.com/activities/${encodeURIComponent(String(c.id))}`, "Ver no Strava")))
+        : el("p", { class: "vazio" }, "Nenhuma corrida nas últimas 8 semanas."),
+      Array.isArray(atleta?.shoes) && atleta.shoes.length ? [
+        el("h3", {}, "Seus tênis"),
+        atleta.shoes.map((t) => el("div", { class: "pessoa" }, el("div", { class: "info" },
+          el("b", {}, t.name || "Tênis"), el("span", {}, `${km((t.distance || 0) / 1000)}${t.primary ? " · principal" : ""}`)))),
+      ] : null,
+      seloStrava());
+  })();
+  return caixa;
+}
+
 // ---------- Treinos ----------
 async function telaTreinos() {
   const lista = await estado.store.treinos(estado.store.uid);
@@ -1342,6 +1577,7 @@ async function telaTreinos() {
       el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(ano)))), el("span", {}, `em ${ano}`)),
       el("div", { class: "numero" }, el("b", {}, String(lista.filter((t) => t.data.startsWith(ano)).length)), el("span", {}, `treinos em ${ano}`)),
       el("div", { class: "numero" }, el("b", {}, String(minhasProvas)), el("span", {}, "provas confirmadas"))),
+    painelStrava(),
     el("section", { class: "painel" }, el("h2", {}, "Lançar treino"), form),
     el("section", { class: "painel" }, el("h2", {}, "Histórico"), itens.length ? itens : el("p", { class: "vazio" }, "Nenhum treino ainda. Lance o primeiro acima.")));
 }
@@ -1592,6 +1828,14 @@ async function aoMudarUsuario(u) {
   estado.filtros.tematica = Boolean(pref?.tematica);
   estado.filtros.noturna = Boolean(pref?.noturna);
   atualizarTopo();
+  // Voltando do login do Strava: conclui a conexão e abre a aba Treinos, onde fica o painel.
+  try {
+    if (await Strava.concluirRetorno()) estado.aba = "treinos";
+  } catch (erro) {
+    console.error(erro);
+    toast(erro.message || "Não foi possível conectar o Strava.");
+    estado.aba = "treinos";
+  }
   irPara(estado.aba || "provas");
 }
 

@@ -1,0 +1,8 @@
+{
+  "name": "ritmex-strava-api",
+  "private": true,
+  "type": "module",
+  "description": "Ritmex: troca e renovação das chaves do Strava (o Client Secret fica só aqui).",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test tests/strava.test.js" }
+}

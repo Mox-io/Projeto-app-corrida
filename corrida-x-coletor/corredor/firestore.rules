@@ -38,6 +38,20 @@ service cloud.firestore {
       allow write: if admin();
     }
 
+    // Chaves do Strava: SÓ a própria pessoa lê e escreve (acordo de API do Strava: os dados do atleta
+    // são só para ele). Não há atividades aqui; elas são lidas do Strava na hora e não ficam guardadas.
+    match /strava/{uid} {
+      allow read, delete: if logado() && uid == eu();
+      allow create, update: if logado() && uid == eu()
+        && soCampos(['atletaId', 'nome', 'foto', 'escopo', 'accessToken', 'refreshToken', 'expiraEm', 'conectadoEm'])
+        && texto(request.resource.data.accessToken, 10, 200)
+        && texto(request.resource.data.refreshToken, 10, 200)
+        && request.resource.data.expiraEm is number
+        && textoOpcional(request.resource.data.nome, 120)
+        && textoOpcional(request.resource.data.foto, 500)
+        && textoOpcional(request.resource.data.escopo, 200);
+    }
+
     // Perfil: cada um escreve só o seu. Logados podem ler (é o que faz a parte social funcionar).
     match /usuarios/{uid} {
       allow read: if logado();
