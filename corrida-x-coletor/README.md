@@ -1,4 +1,4 @@
-# Corrida X — coletor de corridas de rua + app do corredor
+# Ritmex — coletor de corridas de rua + app do corredor
 
 Este repositório tem as duas partes do piloto:
 
@@ -6,7 +6,7 @@ Este repositório tem as duas partes do piloto:
 - **App do corredor** ([`corredor/`](corredor/README.md)): o que o corredor usa. Calendário por região com temáticas e noturnas, "Vou correr" com os amigos, seguir corredores, treinos (manual ou GPX), grupos com ranking de km, parceiros por região e uma área de administração para publicar o `calendario.json` do coletor e marcar provas em destaque.
 
 
-Ferramenta da **fase 1 do projeto piloto Corrida X** (planilha-piloto): pesquisa corridas de rua de uma cidade (em São Paulo, por zona) e monta o calendário das próximas semanas, com fonte e link oficial de cada prova. Usa a mesma arquitetura do **Prospector** (mesma chave da AIsa, mesmo login Firebase, mesmo jeito de publicar na Vercel) e existe nas mesmas duas formas: **linha de comando** e **app web**.
+Ferramenta da **fase 1 do projeto piloto Ritmex** (planilha-piloto): pesquisa corridas de rua de uma cidade (em São Paulo, por zona) e monta o calendário das próximas semanas, com fonte e link oficial de cada prova. Usa a mesma arquitetura do **Prospector** (mesma chave da AIsa, mesmo login Firebase, mesmo jeito de publicar na Vercel) e existe nas mesmas duas formas: **linha de comando** e **app web**.
 
 O agente faz, sozinho, este fluxo:
 

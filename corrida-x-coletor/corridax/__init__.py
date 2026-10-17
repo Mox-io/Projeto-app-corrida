@@ -1,1 +1,1 @@
-"""Corrida X — coletor de corridas de rua."""
+"""Ritmex — coletor de corridas de rua."""

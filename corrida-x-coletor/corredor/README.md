@@ -1,4 +1,4 @@
-# Corrida X — app do corredor (protótipo do piloto)
+# Ritmex — app do corredor (protótipo do piloto)
 
 É a parte que o corredor usa: o calendário com a parte social. O **coletor** (pasta de cima) pesquisa as provas e gera o `calendario.json`; este app publica esse calendário para os corredores.
 

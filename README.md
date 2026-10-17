@@ -1,4 +1,4 @@
-# Corrida X
+# Ritmex
 
 Projeto piloto de calendário de corridas de rua em São Paulo.
 

@@ -1,4 +1,4 @@
-# Imagem do app web do Corrida X (coletor). Serve para qualquer hospedagem que rode Docker.
+# Imagem do app web do Ritmex (coletor). Serve para qualquer hospedagem que rode Docker.
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \

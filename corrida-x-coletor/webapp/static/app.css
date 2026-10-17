@@ -1,4 +1,4 @@
-/* Corrida X — mesmo visual do Prospector e do app de pesquisa de mercado: bege claro, verde de destaque e
+/* Ritmex — mesmo visual do Prospector e do app de pesquisa de mercado: bege claro, verde de destaque e
    fonte do sistema (nada de fonte ou ícone externo). Funciona de 320px de largura para cima. */
 :root {
   --bg: #f7f6f3;
@@ -167,7 +167,7 @@ input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid 
 
 @keyframes girar { to { transform: rotate(360deg); } }
 
-/* ----- Corrida X ----- */
+/* ----- Ritmex ----- */
 .rotulo { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
 textarea { resize: vertical; min-height: 72px; }
 

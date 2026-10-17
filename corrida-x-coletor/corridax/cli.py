@@ -29,7 +29,7 @@ ERROS_FATAIS = (401, 402, 403, 404)
 def criar_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m corridax",
-        description="Pesquisa corridas de rua de uma cidade (em São Paulo, por zona) e monta a planilha-piloto do Corrida X.",
+        description="Pesquisa corridas de rua de uma cidade (em São Paulo, por zona) e monta a planilha-piloto do Ritmex.",
     )
     p.add_argument("--cidade", metavar="CIDADE",
                    help='Cidade do calendário, ex.: --cidade Campinas (padrão: CITY_NAME do .env, "São Paulo")')

@@ -1,4 +1,4 @@
-// Corrida X (coletor) — lógica da página. Mesma base do Prospector.
+// Ritmex (coletor) — lógica da página. Mesma base do Prospector.
 //
 // Regras deste arquivo:
 //  1. Nada que vem do Google (nome da prova, local, links...) entra na página como HTML: tudo é

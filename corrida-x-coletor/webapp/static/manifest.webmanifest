@@ -1,6 +1,6 @@
 {
-  "name": "Corrida X — coletor",
-  "short_name": "Corrida X",
+  "name": "Ritmex — coletor",
+  "short_name": "Ritmex",
   "description": "Pesquisa corridas de rua por região e monta o calendário do piloto",
   "start_url": "/",
   "display": "standalone",

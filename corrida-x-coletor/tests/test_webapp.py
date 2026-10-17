@@ -52,7 +52,7 @@ class TestApi(unittest.TestCase):
         self.assertEqual(dados["regions"][0], "zona sul")
         self.assertTrue(dados["hasApiKey"])
         self.assertNotIn("sk-teste", str(dados))  # a chave nunca vai para a página
-        self.assertIn("Corrida X", self.c.get("/").text)
+        self.assertIn("Ritmex", self.c.get("/").text)
 
     def test_consultas(self):
         r = self.c.post("/api/queries", json={"regions": ["Zona Sul", "norte", "leste", "oeste", "centro"], "weeks": 12,

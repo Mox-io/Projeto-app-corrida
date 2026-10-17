@@ -70,7 +70,7 @@ def criar_app(
     fabrica_cliente = fabrica_cliente or (lambda c: AisaClient(c.api_key, c.base_url))
     hoje = hoje or (lambda: datetime.now(FUSO).date())  # a Vercel roda em UTC; o calendário é de SP
 
-    app = FastAPI(title="Corrida X — coletor", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Ritmex — coletor", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.cfg = cfg
     app.state.verificar_token = verificar_token or (

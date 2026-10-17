@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Regras do app do corredor (Corrida X). A página pode ser alterada por qualquer pessoa,
+// Regras do app do corredor (Ritmex). A página pode ser alterada por qualquer pessoa,
 // então TODA permissão de verdade mora aqui. Publique com:  firebase deploy --only firestore
 //
 // Administradores: crie à mão, no console do Firestore, o documento  config/admins  com o campo
