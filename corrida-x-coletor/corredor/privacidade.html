@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#0f6e56" />
+<meta name="theme-color" content="#0b132b" />
 <title>Privacidade — Ritmex</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f6e56'/%3E%3Cpath d='M20 20l24 24M44 20L20 44' stroke='%23fff' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="icon" type="image/png" href="favicon.png" />
 <style>
-/* Mesmo visual do app (index.html). */
-:root { --bg: #f7f6f3; --surface: #ffffff; --border: #dad7ce; --text: #22201b; --muted: #6b6a63; --accent: #0f6e56;
-        --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+/* Mesmo visual do app (index.html): azul-noite com laranja. */
+:root { --bg: #0b132b; --surface: #121c3b; --border: #27355f; --text: #eef1f8; --muted: #9aa5c4; --accent: #ff7a2e;
+        --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; }
 a { color: var(--accent); }
@@ -28,7 +28,7 @@ ul { padding-left: 20px; }
 <a class="voltar" href="./">← Voltar para o Ritmex</a>
 <article class="painel">
   <h1>Política de privacidade</h1>
-  <p class="data">Ritmex · atualizada em 17/10/2026</p>
+  <p class="data">Ritmex · atualizada em 17/10/2026 (treinos privados)</p>
 
   <p>O Ritmex é um calendário de corridas de rua com uma parte social: você vê as provas da sua cidade,
   confirma em quais vai correr, registra treinos e acompanha os amigos. Esta página explica quais dados
@@ -37,20 +37,23 @@ ul { padding-left: 20px; }
   <h2>Quais dados guardamos</h2>
   <ul>
     <li><b>Da sua conta Google</b> (ao entrar): nome, e-mail e foto. O e-mail não aparece para outros corredores.</li>
-    <li><b>Do seu perfil</b>: nome de exibição, @usuário, cidade, zona (em São Paulo), distâncias preferidas e Instagram, se você informar.</li>
-    <li><b>Do que você faz no app</b>: provas em que marcou "Vou correr", treinos lançados (data, distância, tempo e descrição), quem você segue e os grupos de que participa.</li>
+    <li><b>Do seu perfil</b>: nome de exibição, @usuário, cidade, zona e zonas favoritas de treino (em São Paulo), distâncias preferidas e Instagram, se você informar.</li>
+    <li><b>Do que você faz no app</b>: provas em que marcou "Vou correr", provas que marcou como concluídas (distância e tempo, se informar), treinos lançados (data, distância, tempo e descrição), quem você segue e os grupos de que participa.</li>
     <li><b>Arquivos GPX</b>: são lidos no seu próprio aparelho. Só a distância, o tempo e a data viram um treino; o percurso (o mapa) não é enviado.</li>
   </ul>
 
   <h2>Quem vê</h2>
-  <p>Seu nome, @usuário, cidade, zona, provas confirmadas e treinos ficam <b>visíveis para outros corredores logados</b>.
-  É o que faz a parte social funcionar (ver quem vai em cada prova e o ranking dos grupos). Não mostramos seu e-mail.</p>
+  <p>Seu nome, @usuário, cidade, zona, as provas que você confirma e as provas que você conclui (com distância e tempo)
+  ficam <b>visíveis para outros corredores logados</b>. É o que faz a parte social funcionar (ver quem vai em cada prova,
+  comemorar as chegadas e o ranking dos grupos). Não mostramos seu e-mail.</p>
+  <p><b>Seus treinos são só seus.</b> Eles ficam no seu Meu Painel e não aparecem no feed, no ranking nem para outros corredores.</p>
 
   <h2>Para que usamos</h2>
   <ul>
     <li>Mostrar as provas da sua cidade e zona primeiro.</li>
-    <li>Mostrar para os seus amigos as provas em que você vai e os seus treinos.</li>
-    <li>Montar o ranking dos grupos.</li>
+    <li>Mostrar para os seus amigos as provas em que você vai e as que você concluiu.</li>
+    <li>Montar o ranking dos grupos (km em provas concluídas no ano) e as suas medalhas.</li>
+    <li>Mostrar só para você, no Meu Painel, a evolução dos seus treinos.</li>
     <li>Contar quantas pessoas confirmaram cada prova (só o número, para mostrar aos organizadores).</li>
   </ul>
   <p>Não vendemos seus dados e não mostramos anúncios.</p>
@@ -62,7 +65,7 @@ ul { padding-left: 20px; }
 
   <h2>Por quanto tempo</h2>
   <p>Enquanto você tiver conta. Quando você exclui a conta, apagamos o seu perfil, as provas confirmadas,
-  os treinos, quem você segue e quem segue você, a conexão com o Strava, e tiramos você dos grupos (os grupos que
+  as provas concluídas, os treinos, quem você segue e quem segue você, a conexão com o Strava, e tiramos você dos grupos (os grupos que
   você criou são apagados).</p>
 
   <h2>Seus direitos (LGPD)</h2>
@@ -71,13 +74,13 @@ ul { padding-left: 20px; }
   escreva para <a href="mailto:projetos.tecnologia2026@gmail.com">projetos.tecnologia2026@gmail.com</a>.</p>
 
   <h2>Conexão com o Strava (opcional)</h2>
-  <p>Se você quiser, pode conectar a sua conta do Strava na aba Treinos para ver no Ritmex as suas estatísticas,
+  <p>Se você quiser, pode conectar a sua conta do Strava no Meu Painel para ver no Ritmex as suas estatísticas,
   km por semana, últimas corridas e tênis.</p>
   <ul>
     <li><b>Só você vê</b> esses dados. Eles não aparecem no feed, no ranking dos grupos nem para outros corredores.</li>
     <li>As atividades são lidas do Strava na hora em que você abre a tela e <b>não ficam guardadas</b> no Ritmex.
     Guardamos só a chave de acesso que o Strava fornece, num lugar do banco que só a sua conta consegue ler.</li>
-    <li>Você pode <b>desconectar</b> a qualquer momento na própria aba Treinos (ou nas configurações do Strava, em
+    <li>Você pode <b>desconectar</b> a qualquer momento no próprio Meu Painel (ou nas configurações do Strava, em
     "Meus aplicativos"). Ao desconectar ou excluir a conta, a chave é apagada e o acesso é revogado no Strava.</li>
   </ul>
 

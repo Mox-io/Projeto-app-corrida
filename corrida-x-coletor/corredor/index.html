@@ -3,19 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#0f6e56" />
+<meta name="theme-color" content="#0b132b" />
+<meta name="description" content="Ritmex: o calendário de corridas de rua da sua cidade, com a sua turma." />
 <title>Ritmex — corridas de rua perto de você</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f6e56'/%3E%3Cpath d='M20 20l24 24M44 20L20 44' stroke='%23fff' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="icone-192.png" />
 <style>
-/* Ritmex — app do corredor. Mesmo visual do Prospector/coletor: bege claro, verde de destaque,
+/* Ritmex — app do corredor. Tema escuro azul-noite (#0B132B) com laranja energia (#FF5E00),
    fonte do sistema. Pensado para celular primeiro (barra de abas embaixo), funciona de 320px para cima. */
 :root {
-  --bg: #f7f6f3; --surface: #ffffff; --border: #dad7ce; --text: #22201b; --muted: #6b6a63;
-  --accent: #0f6e56; --accent-dark: #085041; --accent-bg: #e3f1ec;
-  --danger: #a32d2d; --danger-bg: #fcebeb; --warn-bg: #faeeda; --warn: #633806;
-  --ok-bg: #eaf3de; --ok: #27500a; --gold-bg: #fdf3d6; --gold: #6b4a00; --gold-border: #e9cf7f;
-  --radius: 10px; --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --tab-h: 62px;
+  --bg: #0b132b; --surface: #121c3b; --surface-2: #1a2650; --border: #27355f; --text: #eef1f8; --muted: #9aa5c4;
+  --accent: #ff5e00; --accent-dark: #e05200; --accent-bg: rgba(255, 94, 0, .14); --on-accent: #ffffff;
+  --danger: #ff8a80; --danger-bg: rgba(255, 82, 82, .14); --warn-bg: rgba(255, 179, 0, .14); --warn: #ffcc66;
+  --ok-bg: rgba(76, 217, 100, .14); --ok: #7ee2a0; --gold-bg: rgba(255, 196, 0, .14); --gold: #ffd166; --gold-border: #8a6a1f;
+  --radius: 14px; --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --tab-h: 64px;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -25,10 +28,12 @@ a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .topo { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-        background: var(--surface); border-bottom: 1px solid var(--border); }
-.topo h1 { margin: 0; font-size: 17px; flex: 1; }
-.topo h1 small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 4px; }
-.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent-dark);
+        background: rgba(11, 19, 43, .94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+.topo .marca { width: 34px; height: 34px; border-radius: 9px; flex: none; }
+.topo h1 { margin: 0; font-size: 18px; flex: 1; letter-spacing: .5px; font-weight: 800; min-width: 0; }
+.topo h1 small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: 0; overflow: hidden;
+                 text-overflow: ellipsis; white-space: nowrap; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent);
           display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;
           flex: none; border: 0; overflow: hidden; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -38,27 +43,28 @@ button.avatar { cursor: pointer; }
 .conteudo { max-width: 760px; margin: 0 auto; padding: 14px 16px calc(var(--tab-h) + 28px); }
 .carregando { text-align: center; color: var(--muted); padding: 60px 0; }
 
-.abas { position: fixed; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; background: var(--surface);
+.abas { position: fixed; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; background: rgba(11, 19, 43, .97);
         border-top: 1px solid var(--border); height: calc(var(--tab-h) + env(safe-area-inset-bottom));
         padding-bottom: env(safe-area-inset-bottom); }
 .abas button { flex: 1; border: 0; background: none; color: var(--muted); font-size: 11px; display: flex;
                flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; min-width: 0; }
 .abas button svg { width: 22px; height: 22px; }
-.abas button[aria-current="page"] { color: var(--accent); font-weight: 600; }
+.abas button[aria-current="page"] { color: var(--accent); font-weight: 700; }
 
 .painel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
-.painel h2 { margin: 0 0 10px; font-size: 16px; }
-.painel h3 { margin: 14px 0 8px; font-size: 14px; }
+.painel h2 { margin: 0 0 10px; font-size: 17px; }
+.painel h3 { margin: 16px 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
 .dica { color: var(--muted); font-size: 13px; margin: 6px 0; }
-.erro { background: var(--danger-bg); color: var(--danger); padding: 10px 12px; border-radius: 8px; font-size: 14px; margin: 8px 0; }
-.aviso { background: var(--warn-bg); color: var(--warn); padding: 10px 12px; border-radius: 8px; font-size: 13px; margin: 0 0 14px; }
-.ok { background: var(--ok-bg); color: var(--ok); padding: 10px 12px; border-radius: 8px; font-size: 14px; margin: 8px 0; }
+.erro { background: var(--danger-bg); color: var(--danger); padding: 10px 12px; border-radius: 10px; font-size: 14px; margin: 8px 0; }
+.aviso { background: var(--warn-bg); color: var(--warn); padding: 10px 12px; border-radius: 10px; font-size: 13px; margin: 0 0 14px; }
+.ok { background: var(--ok-bg); color: var(--ok); padding: 10px 12px; border-radius: 10px; font-size: 14px; margin: 8px 0; }
 
 .campo { margin-bottom: 12px; }
-.campo label, .rotulo { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+.campo label, .rotulo { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: var(--muted); }
 input[type="text"], input[type="number"], input[type="date"], input[type="search"], input[type="url"], select, textarea {
-  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px;
-  background: #fff; color: var(--text); }
+  width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 16px;
+  background: var(--surface-2); color: var(--text); }
+input::placeholder, textarea::placeholder { color: #6f7ba0; }
 textarea { resize: vertical; min-height: 64px; }
 .grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 10px; }
 .grade--2 { grid-template-columns: 1fr 1fr; }
@@ -66,111 +72,145 @@ textarea { resize: vertical; min-height: 64px; }
 .linha { display: flex; gap: 8px; align-items: center; }
 .linha > input, .linha > select { flex: 1; min-width: 0; }
 .opcao { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; cursor: pointer; }
-.opcao input { width: 18px; height: 18px; }
+.opcao input { width: 18px; height: 18px; accent-color: var(--accent); }
 
-.btn { padding: 10px 16px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: #fff;
-       font-size: 15px; font-weight: 500; cursor: pointer; min-height: 42px; }
+.btn { padding: 10px 16px; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent); color: var(--on-accent);
+       font-size: 15px; font-weight: 700; cursor: pointer; min-height: 42px; }
 .btn:hover { background: var(--accent-dark); }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
-.btn--sec { background: transparent; color: var(--text); border-color: var(--border); }
-.btn--sec:hover { background: var(--bg); }
+.btn--sec { background: transparent; color: var(--text); border-color: var(--border); font-weight: 600; }
+.btn--sec:hover { background: var(--surface-2); }
 .btn--sm { padding: 6px 12px; font-size: 13px; min-height: 34px; }
-.btn--perigo { background: transparent; color: var(--danger); border-color: #e7b9b9; }
+.btn--perigo { background: transparent; color: var(--danger); border-color: #6b2b35; }
 .btn--cheio { width: 100%; }
-.btn--google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: var(--text); border-color: var(--border); }
-.btn--google:hover { background: var(--bg); }
+.btn--google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border-color: #fff; }
+.btn--google:hover { background: #e9edf5; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chips button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px;
-                padding: 6px 12px; font-size: 13px; cursor: pointer; min-height: 34px; }
-.chips button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent-dark); border-color: #a9d3c4; font-weight: 600; }
+.chips button { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 999px;
+                padding: 6px 13px; font-size: 13px; cursor: pointer; min-height: 34px; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
 .filtros { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .rolagem { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; scrollbar-width: none; }
 .rolagem::-webkit-scrollbar { display: none; }
 .rolagem button { flex: none; }
 
-.selo { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #f1efe8; color: #444441; white-space: nowrap; }
-.selo--tema { background: #f3e8fb; color: #5b2a86; }
-.selo--noite { background: #e6e9f7; color: #2b3a7a; }
+.selo { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.selo--tema { background: rgba(186, 104, 255, .16); color: #d6a8ff; }
+.selo--noite { background: rgba(110, 140, 255, .16); color: #aebdff; }
 .selo--gold { background: var(--gold-bg); color: var(--gold); }
 .selo--ok { background: var(--ok-bg); color: var(--ok); }
 .selo--warn { background: var(--warn-bg); color: var(--warn); }
+.selo--preco { background: var(--accent-bg); color: #ffb27f; }
 
-.dia { margin: 18px 0 8px; font-size: 13px; font-weight: 700; color: var(--accent-dark);
-       border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.dia { margin: 20px 0 8px; font-size: 12px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: .6px; }
 .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .cartao { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-.cartao--gold { border-color: var(--gold-border); background: linear-gradient(180deg, #fffaf0, #fff); }
+.cartao--gold { border-color: var(--gold-border); }
 .cartao-cab { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
-.cartao-nome { font-weight: 650; font-size: 15px; overflow-wrap: anywhere; }
+.cartao-nome { font-weight: 750; font-size: 15px; overflow-wrap: anywhere; }
 .meta { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; margin-top: 2px; }
 .etiquetas { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
 .cartao-rodape { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .cartao-rodape .espaco { flex: 1; }
 .links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; margin-top: 8px; }
-.links a { font-weight: 500; display: inline-block; padding: 4px 0; }
-.btn-vou { border: 1px solid var(--accent); background: var(--surface); color: var(--accent); border-radius: 999px;
-           padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; min-height: 38px; }
-.btn-vou[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.links a { font-weight: 600; display: inline-block; padding: 4px 0; }
+.btn-vou { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 999px;
+           padding: 7px 14px; font-weight: 700; font-size: 14px; cursor: pointer; min-height: 38px; }
+.btn-vou[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
 .quem { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); min-width: 0; }
 .pilha { display: flex; }
-.pilha .avatar { margin-left: -6px; border: 2px solid #fff; }
+.pilha .avatar { margin-left: -6px; border: 2px solid var(--surface); }
 .pilha .avatar:first-child { margin-left: 0; }
 
-.proxima { display: flex; gap: 12px; align-items: center; background: var(--accent); color: #fff; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; }
-.proxima b { display: block; font-size: 15px; }
-.proxima .contagem { font-size: 26px; font-weight: 800; line-height: 1; text-align: center; min-width: 54px; }
-.proxima .contagem small { display: block; font-size: 11px; font-weight: 500; opacity: .85; }
+/* Provas: região em destaque e a próxima prova no topo */
+.regiao-atual { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.regiao-atual .pino { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-bg); color: var(--accent);
+                      display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.regiao-atual b { display: block; font-size: 16px; }
+.regiao-atual .espaco { flex: 1; min-width: 0; }
+.destaque { position: relative; overflow: hidden; border-radius: 18px; padding: 16px; margin: 10px 0 6px;
+            background: linear-gradient(135deg, #1b2a5a 0%, #121c3b 60%); border: 1px solid #34467d; }
+.destaque::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%;
+                   background: radial-gradient(circle, rgba(255, 94, 0, .35), transparent 70%); pointer-events: none; }
+.destaque .rotulo-destaque { font-size: 11px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: .8px; }
+.destaque .nome { font-size: 19px; font-weight: 800; margin: 4px 0 2px; overflow-wrap: anywhere; }
+.contagem-grande { display: flex; gap: 8px; margin: 12px 0; }
+.contagem-grande div { background: rgba(255, 255, 255, .06); border-radius: 10px; padding: 8px 10px; text-align: center; min-width: 58px; }
+.contagem-grande b { display: block; font-size: 22px; font-weight: 800; line-height: 1.1; }
+.contagem-grande span { font-size: 11px; color: var(--muted); }
+.btn-inscricao { display: block; text-align: center; text-decoration: none; margin-top: 10px; }
 
 .numeros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
 @media (max-width: 520px) { .numeros { grid-template-columns: 1fr 1fr; } }
-.numero { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
-.numero b { display: block; font-size: 22px; }
+.numero { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.numero b { display: block; font-size: 22px; font-weight: 800; }
 .numero span { font-size: 12px; color: var(--muted); }
 
-.pessoa { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #efede7; }
+.pessoa { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
 .pessoa:last-child { border-bottom: 0; }
 .pessoa .info { flex: 1; min-width: 0; }
 .pessoa .info b { display: block; font-size: 14px; overflow-wrap: anywhere; }
 .pessoa .info span { font-size: 12px; color: var(--muted); }
-.evento { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #efede7; font-size: 14px; }
-.evento:last-child { border-bottom: 0; }
-.evento .quando { color: var(--muted); font-size: 12px; display: block; }
+
+/* Feed: cartões de post */
+.post { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.post-cab { display: flex; gap: 10px; align-items: center; }
+.post-cab .info { flex: 1; min-width: 0; }
+.post-cab b { display: block; font-size: 14px; }
+.post-cab span { font-size: 12px; color: var(--muted); }
+.post-texto { margin: 10px 0 0; font-size: 15px; overflow-wrap: anywhere; }
+.post-faixa { margin-top: 10px; border-radius: 12px; padding: 12px; background: linear-gradient(135deg, #ff5e00, #ff8a3d); color: #fff; }
+.post-faixa b { display: block; font-size: 16px; }
+.post-faixa span { font-size: 13px; opacity: .95; }
+.post-prova { margin-top: 10px; border-radius: 12px; padding: 12px; background: var(--surface-2); }
+.post-prova b { display: block; }
+.post-prova span { font-size: 13px; color: var(--muted); }
+
+/* Perfil: medalhas */
+.medalhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.medalha { text-align: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 6px; }
+.medalha .icone { font-size: 30px; line-height: 1; }
+.medalha b { display: block; font-size: 12px; margin-top: 6px; }
+.medalha span { font-size: 11px; color: var(--muted); }
+.medalha--bloqueada { opacity: .38; filter: grayscale(1); }
 
 table.ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
-.ranking th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500; padding: 6px 4px; border-bottom: 1px solid var(--border); }
-.ranking td { padding: 8px 4px; border-bottom: 1px solid #efede7; }
+.ranking th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.ranking td { padding: 8px 4px; border-bottom: 1px solid var(--border); }
 .ranking td.num, .ranking th.num { text-align: right; white-space: nowrap; }
-.ranking tr.eu td { font-weight: 700; }
-.codigo { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; letter-spacing: 2px; background: var(--bg); padding: 2px 8px; border-radius: 6px; }
+.ranking tr.eu td { font-weight: 800; color: var(--accent); }
+.codigo { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; letter-spacing: 2px; background: var(--surface-2); padding: 2px 8px; border-radius: 6px; }
 
 .vazio { color: var(--muted); font-size: 14px; text-align: center; padding: 22px 8px; }
 .login { max-width: 420px; margin: 30px auto; text-align: center; }
-.login .logo { width: 64px; height: 64px; margin: 0 auto 10px; }
-.login h2 { font-size: 22px; margin: 0 0 6px; }
+.login .logo { width: 88px; height: 88px; margin: 0 auto 10px; border-radius: 22px; display: block; }
+.login h2 { font-size: 26px; margin: 0; letter-spacing: 1px; font-weight: 900; }
+.login .slogan { color: var(--accent); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; margin: 2px 0 10px; }
 .login ul { text-align: left; font-size: 14px; color: var(--muted); padding-left: 20px; }
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + 16px); transform: translateX(-50%); background: #22201b; color: #fff;
-         padding: 10px 16px; border-radius: 999px; font-size: 14px; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + 16px); transform: translateX(-50%); background: #f2f4fa; color: #0b132b;
+         padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
 .voltar { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 6px 0; font-size: 14px; }
-details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 500; }
+details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 600; }
 
-/* Strava: botão na cor da marca (diretrizes do Strava) e gráfico simples de km por semana */
-.btn-strava { background: #fc5200; color: #fff; border: 0; border-radius: 8px; padding: 11px 18px; font-size: 15px; font-weight: 700;
+/* Strava: botão na cor da marca (diretrizes do Strava) e gráficos simples */
+.btn-strava { background: #fc5200; color: #fff; border: 0; border-radius: 10px; padding: 11px 18px; font-size: 15px; font-weight: 700;
               cursor: pointer; min-height: 44px; }
 .btn-strava:hover { background: #e34a00; }
 .powered-strava { text-align: right; margin-top: 12px; }
 .powered-strava b { color: #fc5200; }
 .barras { display: flex; align-items: flex-end; gap: 6px; height: 130px; padding-top: 4px; }
 .barra { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
-.barra-col { width: 100%; max-width: 36px; background: var(--accent); border-radius: 4px 4px 0 0; }
-.barra:last-child .barra-col { background: #fc5200; }
+.barra-col { width: 100%; max-width: 36px; background: #34467d; border-radius: 5px 5px 0 0; }
+.barra:last-child .barra-col { background: var(--accent); }
 .barra-valor { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
 .barra-rotulo { font-size: 11px; color: var(--muted); margin-top: 4px; }
 </style>
 </head>
 <body>
 <header class="topo" id="topo" hidden>
-  <h1>Ritmex <small id="topo-sub"></small></h1>
+  <img class="marca" src="icone-192.png" alt="" width="34" height="34" />
+  <h1>RITMEX <small id="topo-sub"></small></h1>
   <button type="button" class="avatar" id="btn-perfil" aria-label="Meu perfil"></button>
 </header>
 
@@ -180,10 +220,9 @@ details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; f
 
 <nav class="abas" id="abas" hidden aria-label="Seções">
   <button type="button" data-aba="provas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Provas</button>
-  <button type="button" data-aba="atividade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>Amigos</button>
-  <button type="button" data-aba="treinos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Treinos</button>
-  <button type="button" data-aba="grupos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Grupos</button>
-  <button type="button" data-aba="parceiros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg>Parceiros</button>
+  <button type="button" data-aba="feed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>Feed</button>
+  <button type="button" data-aba="painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Meu Painel</button>
+  <button type="button" data-aba="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.2-6 8-6s7 2 8 6"/></svg>Perfil</button>
 </nav>
 
 <script type="module">
@@ -388,8 +427,31 @@ function validarPerfil(p) {
   const instagram = String(p.instagram || "").trim().replace(/^@/, "");
   if (instagram && !/^[A-Za-z0-9._]{1,30}$/.test(instagram)) throw new Error("Instagram inválido.");
   const distancias = (p.distancias || []).filter((d) => DISTANCIAS.some((x) => x.chave === d));
-  return { nome, handle, cidade, regiao: zonas ? p.regiao : "", instagram, distancias, nomeBusca: normalizar(nome), foto: p.foto || null };
+  // Zonas favoritas de treino (só em São Paulo): além da zona principal, onde a pessoa gosta de correr.
+  const favoritas = zonas ? [...new Set((p.zonas || []).filter((z) => REGIOES.includes(z)))].slice(0, 5) : [];
+  return { nome, handle, cidade, regiao: zonas ? p.regiao : "", zonas: favoritas, instagram, distancias, nomeBusca: normalizar(nome), foto: p.foto || null };
 }
+
+// "Concluí esta prova": distância corrida (km) e tempo opcional ("52:10" ou "1:05:30").
+function lerTempo(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return null;
+  const partes = t.split(":").map((x) => Number(x));
+  if (partes.some((x) => !Number.isInteger(x) || x < 0) || partes.length < 2 || partes.length > 3) throw new Error("Tempo no formato mm:ss ou h:mm:ss (ex.: 52:10).");
+  const [h, m, s] = partes.length === 3 ? partes : [0, ...partes];
+  if (m > 59 || s > 59) throw new Error("Tempo inválido (minutos e segundos até 59).");
+  const total = h * 3600 + m * 60 + s;
+  if (!(total > 60 && total < 24 * 3600)) throw new Error("Tempo inválido.");
+  return total;
+}
+function validarConclusao(prova, km, tempo) {
+  const distanciaKm = Number(String(km).replace(",", "."));
+  if (!(distanciaKm > 0 && distanciaKm <= 250)) throw new Error("Informe a distância que você correu (km).");
+  if (!prova?.id || !prova?.data) throw new Error("Prova inválida.");
+  return { provaId: prova.id, provaNome: String(prova.nome || "").slice(0, 200), data: prova.data,
+    distanciaKm: Math.round(distanciaKm * 100) / 100, tempoSeg: lerTempo(tempo) };
+}
+const tempoTexto = (s) => (s == null ? null : `${s >= 3600 ? `${Math.floor(s / 3600)}:` : ""}${String(Math.floor((s % 3600) / 60)).padStart(s >= 3600 ? 2 : 1, "0")}:${String(s % 60).padStart(2, "0")}`);
 
 function validarTreino(t) {
   const kmN = Number(String(t.km).replace(",", "."));
@@ -435,7 +497,7 @@ const DEMO_OUTRAS_CIDADES = [
 class StoreDemo {
   constructor() {
     this.demo = true;
-    this.chave = "corridax-corredor-demo-v1";
+    this.chave = "corridax-corredor-demo-v2"; // v2: conclusões, provas passadas, preços e zonas favoritas
     this.d = this.carregar() || this.semente();
   }
   hoje() { return DEMO_HOJE; }
@@ -468,7 +530,23 @@ class StoreDemo {
     };
     for (const p of Object.values(pessoas)) p.nomeBusca = normalizar(p.nome);
     const provas = {};
-    for (const p of [...DEMO_PROVAS, ...DEMO_OUTRAS_CIDADES]) provas[p.id] = { ...p, destaque: false };
+    // Duas provas que já passaram (antes de 15/10/2026), para o histórico, as conclusões e as medalhas.
+    const passadas = [
+      ["2026-09-20", "07:00", "Circuito das Estações, edição Primavera", "Praça Charles Miller", ["centro", "zona oeste"], "Centro/oeste", ["5 km", "10 km"], "TTK"],
+      ["2026-10-04", "07:00", "Track&Field Run Series Ibirapuera (exemplo)", "Shopping Ibirapuera", ["zona sul"], "Zona sul", ["5 km", "10 km"], "TF Sports"],
+    ].map(([data, horario, nome, local, regioes, regiao, distancias, organizador]) => ({
+      id: `${data}-${slug(nome)}`, nome, data, horario, local, cidade: CIDADE, regiao, regioes, distancias, organizador,
+      plataforma: "Plataforma fictícia (demonstração)", preco: null, porte: null, link_inscricao: `https://inscricoes.example/evento/${slug(nome)}`,
+      fonte: { nome: "agenda.example", url: `https://agenda.example/corridas/${slug(nome)}`, coletado_em: DEMO_HOJE }, tags: [], conferido: true,
+    }));
+    for (const p of [...DEMO_PROVAS, ...DEMO_OUTRAS_CIDADES, ...passadas]) provas[p.id] = { ...p, destaque: false };
+    // Lote e valor de exemplo em algumas provas (o coletor traz quando a página da prova informa).
+    const precos = { "sportv": "1º lote · R$ 149,90", "smart-fit": "R$ 99,90", "night-run": "2º lote · R$ 129,90", "dorina": "R$ 89,00",
+      "meia-de-sampa": "2º lote · R$ 189,00", "disney": "1º lote · R$ 169,90", "caixa": "R$ 79,90", "eco-run": "1º lote · R$ 110,00" };
+    for (const [trecho, preco] of Object.entries(precos)) {
+      const id = Object.keys(provas).find((x) => x.includes(trecho));
+      if (id) provas[id].preco = preco;
+    }
     const ids = Object.keys(provas);
     const destaque = ids.find((id) => id.includes("sportv")) || ids[0];
     if (destaque) provas[destaque].destaque = true;
@@ -481,7 +559,21 @@ class StoreDemo {
       confirmar("demo-ana", "sportv", 1), confirmar("demo-carla", "sportv", 2), confirmar("demo-bruno", "meia-de-sampa", 0.2),
       confirmar("demo-ana", "meia-de-sampa", 3), confirmar("demo-eduardo", "corrida-cartoon", 4), confirmar("demo-carla", "disney", 1.5),
       confirmar("demo-fernanda", "mulher-maravilha", 2), confirmar("demo-bruno", "eco-run", 5), confirmar("demo-ana", "super-herois", 0.5),
+      confirmar("demo-ana", "estacoes-edicao-primavera", 30), confirmar("demo-carla", "estacoes-edicao-primavera", 29),
+      confirmar("demo-bruno", "track-field-run-series-ibirapuera", 15),
+      // Você confirmou as duas provas passadas: uma já marcada como concluída, a outra esperando o "Concluí".
+      ["2026-09-20-circuito-das-estacoes-edicao-primavera_demo-eu", { provaId: "2026-09-20-circuito-das-estacoes-edicao-primavera", uid: "demo-eu", nome: "Você", data: "2026-09-20", em: "2026-09-01T10:00:00.000Z" }],
+      ["2026-10-04-track-field-run-series-ibirapuera-exemplo_demo-eu", { provaId: "2026-10-04-track-field-run-series-ibirapuera-exemplo", uid: "demo-eu", nome: "Você", data: "2026-10-04", em: "2026-09-20T10:00:00.000Z" }],
     ].filter(Boolean));
+    const conclusao = (uid, trecho, km, tempoSeg, emDias) => {
+      const p = Object.values(provas).find((x) => x.id.includes(trecho));
+      return [`${p.id}_${uid}`, { provaId: p.id, provaNome: p.nome, data: p.data, distanciaKm: km, tempoSeg, uid,
+        nome: pessoas[uid]?.nome || "Você", em: new Date(Date.parse(`${DEMO_HOJE}T12:00:00`) - emDias * 86400000).toISOString() }];
+    };
+    const conclusoes = Object.fromEntries([
+      conclusao("demo-ana", "estacoes-edicao-primavera", 10, 3130, 25), conclusao("demo-carla", "estacoes-edicao-primavera", 5, 1720, 25),
+      conclusao("demo-bruno", "track-field-run-series-ibirapuera", 10, 2850, 11), conclusao("demo-eu", "estacoes-edicao-primavera", 10, 3300, 25),
+    ]);
     const treinos = {};
     const addTreino = (uid, data, kmN, minutos, descricao) => {
       const id = `t-${uid}-${data}-${kmN}`;
@@ -502,7 +594,7 @@ class StoreDemo {
       "p3": { nome: "Assessoria Pace Certo (exemplo)", categoria: "assessoria", regiao: "zona sul", cidade: "São Paulo", descricao: "Treinos em grupo no Ibirapuera, terça e quinta.", site: "https://parceiro.example/assessoria", instagram: "", whatsapp: "" },
       "p4": { nome: "Treinador do Lago (exemplo)", categoria: "consultoria", regiao: "online", cidade: "Bragança Paulista", descricao: "Planilha de treino e acompanhamento online.", site: "https://parceiro.example/treinador", instagram: "", whatsapp: "" },
     };
-    return { usuarios: pessoas, provas, confirmacoes, follows: { "demo-eu_demo-ana": { seguidor: "demo-eu", alvo: "demo-ana" }, "demo-eu_demo-bruno": { seguidor: "demo-eu", alvo: "demo-bruno" } }, treinos, grupos, parceiros, admin: true, logado: false };
+    return { usuarios: pessoas, provas, confirmacoes, conclusoes, follows: { "demo-eu_demo-ana": { seguidor: "demo-eu", alvo: "demo-ana" }, "demo-eu_demo-bruno": { seguidor: "demo-eu", alvo: "demo-bruno" } }, treinos, grupos, parceiros, admin: true, logado: false };
   }
 
   // --- sessão ---
@@ -562,11 +654,35 @@ class StoreDemo {
     else delete this.d.follows[id];
     this.salvar();
   }
+  // Feed: provas confirmadas e provas concluídas. Treinos NÃO entram (são privados, só no Meu Painel).
   async feed(uids) {
     const set = new Set(uids);
     const conf = Object.values(this.d.confirmacoes).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "confirmacao", ...c }));
-    const tr = Object.values(this.d.treinos).filter((t) => set.has(t.uid)).map((t) => ({ tipo: "treino", ...t }));
-    return [...conf, ...tr].sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
+    const fim = Object.values(this.d.conclusoes || {}).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "conclusao", ...c }));
+    return [...conf, ...fim].sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
+  }
+  async usuariosDaCidade(cidade) {
+    return Object.entries(this.d.usuarios).filter(([u, p]) => u !== this.uid && mesmaCidade(cidadeDa(p), cidade))
+      .slice(0, 20).map(([uid, p]) => ({ uid, ...p }));
+  }
+
+  // --- provas passadas e conclusões ---
+  async provaPorId(id) { return this.d.provas[id] ? { ...this.d.provas[id], id } : null; }
+  async minhasConfirmacoes() { return Object.values(this.d.confirmacoes).filter((c) => c.uid === this.uid); }
+  async minhasConclusoes() { return Object.values(this.d.conclusoes || {}).filter((c) => c.uid === this.uid); }
+  async conclusoesDe(uids, desde) {
+    const set = new Set(uids);
+    return Object.values(this.d.conclusoes || {}).filter((c) => set.has(c.uid) && c.data >= desde);
+  }
+  async concluir(prova, km, tempo, nome) {
+    const v = validarConclusao(prova, km, tempo);
+    this.d.conclusoes = this.d.conclusoes || {};
+    this.d.conclusoes[`${prova.id}_${this.uid}`] = { ...v, uid: this.uid, nome, em: new Date().toISOString() };
+    this.salvar();
+  }
+  async removerConclusao(provaId) {
+    delete (this.d.conclusoes || {})[`${provaId}_${this.uid}`];
+    this.salvar();
   }
 
   // --- treinos ---
@@ -582,11 +698,6 @@ class StoreDemo {
     if (this.d.treinos[id]?.uid === this.uid) delete this.d.treinos[id];
     this.salvar();
   }
-  async treinosDe(uids, desde) {
-    const set = new Set(uids);
-    return Object.values(this.d.treinos).filter((t) => set.has(t.uid) && t.data >= desde);
-  }
-
   // --- grupos ---
   async meusGrupos() {
     return Object.entries(this.d.grupos).filter(([, g]) => g.membros.includes(this.uid)).map(([id, g]) => ({ id, ...g }));
@@ -781,16 +892,45 @@ class StoreFirebase {
     if (sim) await this.F.setDoc(r, { seguidor: this.uid, alvo, em: new Date().toISOString() });
     else await this.F.deleteDoc(r);
   }
+  // Feed: provas confirmadas e provas concluídas. Treinos NÃO entram (são privados, só no Meu Painel).
   async feed(uids) {
     if (!uids.length) return [];
     const { orderBy, limit } = this.F;
-    const [conf, tr] = await Promise.all([
+    const [conf, fim] = await Promise.all([
       this.emPartes("confirmacoes", "uid", uids, [orderBy("em", "desc"), limit(40)]),
-      this.emPartes("treinos", "uid", uids, [orderBy("em", "desc"), limit(40)]),
+      this.emPartes("conclusoes", "uid", uids, [orderBy("em", "desc"), limit(40)]),
     ]);
-    return [...conf.map((c) => ({ tipo: "confirmacao", ...c })), ...tr.map((t) => ({ tipo: "treino", ...t }))]
+    return [...conf.map((c) => ({ tipo: "confirmacao", ...c })), ...fim.map((c) => ({ tipo: "conclusao", ...c }))]
       .sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
   }
+  async usuariosDaCidade(cidade) {
+    const { query, where, limit } = this.F;
+    return (await this.lista(query(this.col("usuarios"), where("cidade", "==", cidade), limit(21))))
+      .filter((p) => p.id !== this.uid).slice(0, 20).map((p) => ({ uid: p.id, ...p }));
+  }
+
+  // --- provas passadas e conclusões ---
+  async provaPorId(id) {
+    const s = await this.F.getDoc(this.ref("provas", id));
+    return s.exists() ? { ...s.data(), id } : null;
+  }
+  async minhasConfirmacoes() {
+    const { query, where } = this.F;
+    return this.lista(query(this.col("confirmacoes"), where("uid", "==", this.uid)));
+  }
+  async minhasConclusoes() {
+    const { query, where } = this.F;
+    return this.lista(query(this.col("conclusoes"), where("uid", "==", this.uid)));
+  }
+  async conclusoesDe(uids, desde) {
+    if (!uids.length) return [];
+    return this.emPartes("conclusoes", "uid", uids, [this.F.where("data", ">=", desde)]);
+  }
+  async concluir(prova, km, tempo, nome) {
+    const v = validarConclusao(prova, km, tempo);
+    await this.F.setDoc(this.ref("conclusoes", `${prova.id}_${this.uid}`), { ...v, uid: this.uid, nome, em: new Date().toISOString() });
+  }
+  async removerConclusao(provaId) { await this.F.deleteDoc(this.ref("conclusoes", `${provaId}_${this.uid}`)); }
 
   async treinos(uid) {
     const { query, where, orderBy, limit } = this.F;
@@ -800,10 +940,6 @@ class StoreFirebase {
     await this.F.addDoc(this.col("treinos"), { ...validarTreino(t), uid: this.uid, nome, em: new Date().toISOString() });
   }
   async removerTreino(id) { await this.F.deleteDoc(this.ref("treinos", id)); }
-  async treinosDe(uids, desde) {
-    if (!uids.length) return [];
-    return this.emPartes("treinos", "uid", uids, [this.F.where("data", ">=", desde)]);
-  }
 
   async meusGrupos() {
     const { query, where } = this.F;
@@ -875,7 +1011,7 @@ class StoreFirebase {
     const uid = this.uid;
     await Strava.desconectar().catch(() => {}); // revoga o acesso no Strava e apaga as chaves guardadas
     for (const g of await this.meusGrupos()) await this.sairGrupo(g.id);
-    const consultas = [["confirmacoes", "uid"], ["treinos", "uid"], ["follows", "seguidor"], ["follows", "alvo"]];
+    const consultas = [["confirmacoes", "uid"], ["conclusoes", "uid"], ["treinos", "uid"], ["follows", "seguidor"], ["follows", "alvo"]];
     const docs = (await Promise.all(consultas.map(([c, campo]) => this.F.getDocs(query(this.col(c), where(campo, "==", uid))))))
       .flatMap((s) => s.docs);
     for (let i = 0; i < docs.length; i += 400) {
@@ -901,7 +1037,7 @@ class StoreFirebase {
 const estado = {
   store: null, demo: false, usuario: null, perfil: null, admin: false,
   aba: "provas", provas: [], confirmacoes: [], seguindo: [], pessoas: {},
-  filtros: { cidade: CIDADE, regioes: null, distancias: new Set(), tematica: false, noturna: false, amigos: false },
+  filtros: { cidade: CIDADE, regioes: null, distancias: new Set(), tematica: false, noturna: false, amigos: false, preco: null, quando: null },
 };
 
 function preferencias() {
@@ -910,7 +1046,7 @@ function preferencias() {
 function salvarPreferencias() {
   try {
     const f = estado.filtros;
-    localStorage.setItem("corridax-filtros", JSON.stringify({ cidade: f.cidade, regioes: f.regioes ? [...f.regioes] : null, distancias: [...f.distancias], tematica: f.tematica, noturna: f.noturna }));
+    localStorage.setItem("corridax-filtros", JSON.stringify({ cidade: f.cidade, regioes: f.regioes ? [...f.regioes] : null, distancias: [...f.distancias], tematica: f.tematica, noturna: f.noturna, preco: f.preco, quando: f.quando }));
   } catch { /* ignora */ }
 }
 
@@ -958,33 +1094,42 @@ function telaLogin(mensagem = "") {
   botao.addEventListener("click", () => executar(botao, () => estado.store.entrar()));
   tela(
     el("section", { class: "painel login" },
-      el("svg", { class: "logo", viewBox: "0 0 64 64", "aria-hidden": "true" }),
-      el("h2", {}, "Ritmex"),
-      el("p", { class: "dica" }, `Todas as corridas de rua de ${CIDADE} num lugar só, por região, com o link da inscrição.`),
+      el("img", { class: "logo", src: "icone-192.png", alt: "", width: "88", height: "88" }),
+      el("h2", {}, "RITMEX"),
+      el("p", { class: "slogan" }, "Mais que km, é comunidade"),
+      el("p", { class: "dica" }, "O calendário de corridas de rua da sua cidade, com a sua turma."),
       el("ul", {},
-        el("li", {}, "Calendário por região, com as corridas temáticas e noturnas"),
-        el("li", {}, "Veja quais amigos vão em cada prova"),
-        el("li", {}, "Registre seus treinos e dispute o ranking do grupo"),
-        el("li", {}, "Nutricionistas, fisioterapeutas e assessorias da sua região")),
+        el("li", {}, "Todas as provas da sua região, com lote, valor e o link oficial da inscrição"),
+        el("li", {}, "Veja quais amigos vão em cada prova e comemore as chegadas"),
+        el("li", {}, "Seu painel privado de treinos, com o Strava"),
+        el("li", {}, "Medalhas dos circuitos que você completar")),
       mensagem ? el("p", { class: "erro", role: "alert" }, mensagem) : null,
       botao,
       estado.demo ? el("p", { class: "aviso", style: "margin-top:12px" }, "Modo demonstração: dados de exemplo, guardados só neste navegador. Pessoas, parceiros e links são fictícios.") : null,
-      el("p", { class: "dica" }, "Ao entrar, seu nome, cidade, provas confirmadas e treinos ficam visíveis para outros corredores logados. ",
+      el("p", { class: "dica" }, "Ao entrar, seu nome, cidade e as provas que você confirma e conclui ficam visíveis para outros corredores logados. Seus treinos são só seus. ",
         el("a", { href: "privacidade.html" }, "Política de privacidade"))));
-  $(".login .logo").innerHTML = '<rect width="64" height="64" rx="14" fill="#0f6e56"/><path d="M20 20l24 24M44 20L20 44" stroke="#fff" stroke-width="7" stroke-linecap="round"/>';
 }
 
-// ---------- Perfil (também é o cadastro do primeiro acesso) ----------
-function telaPerfil(primeiraVez = false) {
-  const p = estado.perfil || { nome: estado.usuario?.nome || "", handle: "", cidade: "", regiao: "", distancias: [], instagram: "" };
+// ---------- Perfil: formulário (primeiro acesso e edição) ----------
+function formularioPerfil(primeiraVez) {
+  const p = estado.perfil || { nome: estado.usuario?.nome || "", handle: "", cidade: "", regiao: "", zonas: [], distancias: [], instagram: "" };
   const escolhidas = new Set(p.distancias || []);
+  const favoritas = new Set(p.zonas || []);
   const cidadesConhecidas = [...new Set([...CIDADES_SUGERIDAS, ...estado.provas.map(cidadeDa)])].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const cidade = el("input", { id: "pf-cidade", type: "text", maxlength: "60", list: "pf-cidades", autocomplete: "address-level2",
     value: estado.perfil ? cidadeDa(p) : "", placeholder: "ex.: São Paulo" });
   const listaCidades = el("datalist", { id: "pf-cidades" }, cidadesConhecidas.map((c) => el("option", { value: c })));
   const regiao = el("select", { id: "pf-regiao" }, el("option", { value: "" }, "Escolha..."),
     REGIOES.map((r) => el("option", { value: r, selected: p.regiao === r }, NOME_REGIAO[r])));
-  const campoZona = el("div", { class: "campo" }, el("label", { for: "pf-regiao" }, `Zona onde você corre (${CIDADE})`), regiao);
+  const zonasFav = el("div", { class: "chips" });
+  const renderZonas = () => zonasFav.replaceChildren(...REGIOES.map((r) => el("button", {
+    type: "button", "aria-pressed": String(favoritas.has(r)),
+    onclick: () => { favoritas.has(r) ? favoritas.delete(r) : favoritas.add(r); renderZonas(); },
+  }, NOME_REGIAO[r])));
+  renderZonas();
+  const campoZona = el("div", {},
+    el("div", { class: "campo" }, el("label", { for: "pf-regiao" }, `Zona onde você mora (${CIDADE})`), regiao),
+    el("div", { class: "campo" }, el("span", { class: "rotulo" }, "Zonas favoritas de treino"), zonasFav));
   const mostrarZona = () => { campoZona.hidden = !temZonas(cidadeCanonica(cidade.value)); };
   cidade.addEventListener("input", mostrarZona);
   mostrarZona();
@@ -1010,7 +1155,8 @@ function telaPerfil(primeiraVez = false) {
     erro.hidden = true;
     executar(salvar, async () => {
       try {
-        const dados = { nome: $("#pf-nome").value, handle: $("#pf-handle").value, cidade: cidade.value, regiao: regiao.value, distancias: [...escolhidas], instagram: $("#pf-insta").value, foto: estado.usuario?.foto || p.foto || null };
+        const dados = { nome: $("#pf-nome").value, handle: $("#pf-handle").value, cidade: cidade.value, regiao: regiao.value, zonas: [...favoritas],
+          distancias: [...escolhidas], instagram: $("#pf-insta").value, foto: estado.usuario?.foto || p.foto || null };
         validarPerfil(dados);
         await estado.store.salvarPerfil(dados);
       } catch (er) {
@@ -1026,17 +1172,68 @@ function telaPerfil(primeiraVez = false) {
       }
       toast("Perfil salvo.");
       atualizarTopo();
-      irPara("provas");
+      irPara(primeiraVez ? "provas" : "perfil");
     });
   });
+  return form;
+}
 
-  const acoes = primeiraVez ? null : el("div", { class: "painel" },
+// Primeiro acesso: só o formulário, sem abas.
+function telaPerfil() {
+  $("#topo").hidden = true;
+  $("#abas").hidden = true;
+  tela(el("section", { class: "painel" },
+    el("h2", {}, "Bem-vindo! Monte seu perfil"),
+    el("p", { class: "dica" }, `Usamos a sua cidade (e, em ${CIDADE}, a zona) para mostrar primeiro as provas perto de você.`),
+    formularioPerfil(true)));
+}
+
+// ---------- Medalhas (provas concluídas) ----------
+const MEDALHAS = [
+  { icone: "🏁", nome: "Primeira prova", desc: "Complete 1 prova", ok: (cs) => cs.length >= 1 },
+  { icone: "🎖️", nome: "5 provas", desc: "Complete 5 provas", ok: (cs) => cs.length >= 5 },
+  { icone: "🔟", nome: "10 km", desc: "Uma prova de 10 km", ok: (cs) => cs.some((c) => c.distanciaKm >= 10) },
+  { icone: "🥈", nome: "Meia maratona", desc: "21 km numa prova", ok: (cs) => cs.some((c) => c.distanciaKm >= 21) },
+  { icone: "🥇", nome: "Maratona", desc: "42 km numa prova", ok: (cs) => cs.some((c) => c.distanciaKm >= 42) },
+];
+// Circuitos oficiais da região: a medalha vem ao concluir uma etapa (pelo nome da prova).
+const CIRCUITOS = [
+  { icone: "⚡", nome: "Track&Field", padrao: /track field|stfrs/ },
+  { icone: "🍂", nome: "Circuito das Estações", padrao: /circuito das estacoes/ },
+  { icone: "🌙", nome: "Night Run", padrao: /night run/ },
+  { icone: "🏙️", nome: "SP City Marathon", padrao: /sp city|city marathon/ },
+  { icone: "🎆", nome: "São Silvestre", padrao: /sao silvestre/ },
+  { icone: "🏦", nome: "Circuito Caixa", padrao: /circuito de corridas caixa|circuito caixa/ },
+];
+
+function painelMedalhas(conclusoes) {
+  const cartao = (icone, nome, desc, ok) => el("div", { class: `medalha${ok ? "" : " medalha--bloqueada"}`, title: desc },
+    el("div", { class: "icone", "aria-hidden": "true" }, icone), el("b", {}, nome), el("span", {}, ok ? "conquistada" : desc));
+  return el("section", { class: "painel" },
+    el("h2", {}, `Medalhas (${MEDALHAS.filter((m) => m.ok(conclusoes)).length + CIRCUITOS.filter((c) => conclusoes.some((x) => c.padrao.test(normalizar(x.provaNome)))).length})`),
+    el("div", { class: "medalhas" }, MEDALHAS.map((m) => cartao(m.icone, m.nome, m.desc, m.ok(conclusoes)))),
+    el("h3", {}, "Circuitos da região"),
+    el("div", { class: "medalhas" }, CIRCUITOS.map((c) => cartao(c.icone, c.nome, "Conclua uma etapa", conclusoes.some((x) => c.padrao.test(normalizar(x.provaNome)))))),
+    el("p", { class: "dica" }, "As medalhas vêm das provas que você marca como concluídas no Meu Painel."));
+}
+
+// ---------- Aba Perfil ----------
+async function telaPerfilAba() {
+  const p = estado.perfil;
+  const [conclusoes, seguindo, nSeguidores] = await Promise.all([
+    estado.store.minhasConclusoes(), estado.store.seguindo(), estado.store.seguidores(estado.store.uid),
+  ]);
+  const zona = temZonas(cidadeDa(p)) && p.regiao ? NOME_REGIAO[p.regiao] : null;
+  const favoritas = (p.zonas || []).map((z) => NOME_REGIAO[z]).filter(Boolean);
+  const kmProvas = conclusoes.reduce((s, c) => s + (c.distanciaKm || 0), 0);
+
+  const acoes = el("section", { class: "painel" },
     estado.admin ? el("button", { type: "button", class: "btn btn--sec btn--cheio", style: "margin-bottom:8px", onclick: () => telaAdmin() }, "Administração (provas e parceiros)") : null,
     estado.demo ? el("button", { type: "button", class: "btn btn--sec btn--cheio", style: "margin-bottom:8px", onclick: async () => { estado.store.zerar(); location.reload(); } }, "Recomeçar a demonstração") : null,
     el("button", { type: "button", class: "btn btn--perigo btn--cheio", onclick: (e) => executar(e.currentTarget, () => estado.store.sair()) }, "Sair"),
     el("details", { class: "mais", style: "margin-top:14px" },
       el("summary", {}, "Privacidade e exclusão da conta"),
-      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas, treinos, quem você segue e quem segue você, a conexão com o Strava, ",
+      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas e concluídas, treinos, quem você segue e quem segue você, a conexão com o Strava, ",
         "e tira você dos grupos (os que você criou são apagados). Não dá para desfazer. ",
         el("a", { href: "privacidade.html" }, "Política de privacidade")),
       el("button", {
@@ -1048,15 +1245,21 @@ function telaPerfil(primeiraVez = false) {
         },
       }, "Excluir minha conta")));
 
-  $("#topo").hidden = primeiraVez;
-  $("#abas").hidden = primeiraVez;
-  marcarAba(null);
   tela(
-    primeiraVez ? null : el("button", { type: "button", class: "voltar", onclick: () => irPara("provas") }, "← Voltar"),
     el("section", { class: "painel" },
-      el("h2", {}, primeiraVez ? "Bem-vindo! Monte seu perfil" : "Meu perfil"),
-      primeiraVez ? el("p", { class: "dica" }, `Usamos a sua cidade (e, em ${CIDADE}, a zona) para mostrar primeiro as provas perto de você.`) : null,
-      form),
+      el("div", { class: "pessoa", style: "border:0" },
+        el("span", { class: "avatar", style: "width:56px;height:56px;font-size:20px" }, ...avatar({ ...p, foto: estado.usuario?.foto || p.foto }).childNodes),
+        el("div", { class: "info" }, el("b", { style: "font-size:18px" }, p.nome),
+          el("span", {}, [`@${p.handle}`, cidadeDa(p), zona].filter(Boolean).join(" · ")))),
+      el("div", { class: "numeros", style: "margin:12px 0 0" },
+        el("div", { class: "numero" }, el("b", {}, String(conclusoes.length)), el("span", {}, "provas concluídas")),
+        el("div", { class: "numero" }, el("b", {}, km(kmProvas)), el("span", {}, "em provas")),
+        el("div", { class: "numero" }, el("b", {}, String(seguindo.length)), el("span", {}, "seguindo")),
+        el("div", { class: "numero" }, el("b", {}, String(nSeguidores)), el("span", {}, nSeguidores === 1 ? "seguidor" : "seguidores"))),
+      favoritas.length ? el("p", { class: "dica" }, `Zonas favoritas de treino: ${favoritas.join(", ")}`) : null),
+    painelMedalhas(conclusoes),
+    el("section", { class: "painel" },
+      el("details", { class: "mais" }, el("summary", {}, "Editar perfil e zonas favoritas"), el("div", { style: "margin-top:12px" }, formularioPerfil(false)))),
     acoes);
 }
 
@@ -1069,11 +1272,12 @@ function marcarAba(aba) {
 }
 
 async function irPara(aba) {
+  const telas = { provas: telaProvas, feed: telaFeed, painel: telaPainel, perfil: telaPerfilAba };
+  if (!telas[aba]) aba = "provas"; // abas antigas guardadas (amigos, treinos...) caem em Provas
   estado.aba = aba;
   $("#topo").hidden = false;
   $("#abas").hidden = false;
   marcarAba(aba);
-  const telas = { provas: telaProvas, atividade: telaAtividade, treinos: telaTreinos, grupos: telaGrupos, parceiros: telaParceiros };
   tela(el("p", { class: "carregando" }, "Carregando..."));
   try {
     await telas[aba]();
@@ -1086,7 +1290,7 @@ async function irPara(aba) {
 
 function atualizarTopo() {
   const zona = estado.perfil && temZonas(cidadeDa(estado.perfil)) ? NOME_REGIAO[estado.perfil.regiao] : "";
-  $("#topo-sub").textContent = estado.perfil ? `· ${cidadeDa(estado.perfil)}${zona ? `, ${zona.toLowerCase()}` : ""}${estado.demo ? " · demonstração" : ""}` : "";
+  $("#topo-sub").textContent = estado.perfil ? `${cidadeDa(estado.perfil)}${zona ? ` · ${zona}` : ""}${estado.demo ? " · demonstração" : ""}` : "";
   $("#btn-perfil").replaceChildren(...avatar({ ...estado.perfil, foto: estado.usuario?.foto || estado.perfil?.foto }).childNodes);
   if (!$("#btn-perfil").childNodes.length) $("#btn-perfil").textContent = iniciais(estado.perfil?.nome);
 }
@@ -1098,6 +1302,29 @@ async function carregarProvas() {
   estado.confirmacoes = confirmacoes;
   estado.seguindo = seguindo;
 }
+
+// Valor em reais do texto do lote ("1º lote · R$ 149,90" -> 149.9); null quando não informado.
+function precoValor(p) {
+  const m = String(p.preco || "").match(/R\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/i);
+  return m ? Number(m[1].replace(/\./g, "").replace(",", ".")) : null;
+}
+
+// Período escolhido nos filtros: fim de semana, próximos 30 dias ou este mês.
+function noPeriodo(data, quando, hoje) {
+  if (!quando) return true;
+  const dias = diasAte(data, hoje);
+  if (quando === "30d") return dias <= 30;
+  if (quando === "mes") return data.slice(0, 7) === hoje.slice(0, 7);
+  if (quando === "fds") {
+    const d = new Date(`${hoje}T12:00:00`).getDay(); // 0 = domingo, 6 = sábado
+    const ateSabado = d === 0 ? -1 : (6 - d);
+    return dias >= Math.max(0, ateSabado) && dias <= ateSabado + 1;
+  }
+  return true;
+}
+
+const PRECOS = [[100, "Até R$ 100"], [150, "Até R$ 150"], [200, "Até R$ 200"]];
+const PERIODOS = [["fds", "Fim de semana"], ["30d", "Próximos 30 dias"], ["mes", "Este mês"]];
 
 function passaFiltros(p) {
   const f = estado.filtros;
@@ -1112,6 +1339,11 @@ function passaFiltros(p) {
     const faixas = DISTANCIAS.filter((d) => f.distancias.has(d.chave));
     if (!kms.some((k) => faixas.some((d) => k >= d.min && k <= d.max))) return false;
   }
+  if (f.preco) {
+    const v = precoValor(p);
+    if (v == null || v > f.preco) return false;
+  }
+  if (!noPeriodo(p.data, f.quando, estado.store.hoje())) return false;
   const tags = etiquetas(p);
   if (f.tematica && !tags.includes("tematica")) return false;
   if (f.noturna && !tags.includes("noturna")) return false;
@@ -1122,68 +1354,97 @@ function passaFiltros(p) {
   return true;
 }
 
-function cartaoProva(p) {
-  const meuUid = estado.store.uid;
-  const daProva = estado.confirmacoes.filter((c) => c.provaId === p.id);
-  const vou = daProva.some((c) => c.uid === meuUid);
-  const amigos = new Set(estado.seguindo);
-  const amigosVao = daProva.filter((c) => amigos.has(c.uid));
-  const tags = etiquetas(p);
-  const botaoVou = el("button", { type: "button", class: "btn-vou", "aria-pressed": String(vou) }, vou ? "✓ Vou correr" : "Vou correr");
-  botaoVou.addEventListener("click", () => executar(null, async () => {
+function botaoVouCorrer(p, aoMudar) {
+  const vou = estado.confirmacoes.some((c) => c.provaId === p.id && c.uid === estado.store.uid);
+  const botao = el("button", { type: "button", class: "btn-vou", "aria-pressed": String(vou) }, vou ? "✓ Vou correr" : "Vou correr");
+  botao.addEventListener("click", () => executar(null, async () => {
     await estado.store.confirmar(p, !vou, estado.perfil.nome);
     estado.confirmacoes = await estado.store.confirmacoes();
     toast(vou ? "Presença retirada." : "Presença confirmada! Seus amigos vão ver.");
-    renderListaProvas();
+    aoMudar();
   }));
+  return botao;
+}
+
+function quemVai(p) {
+  const daProva = estado.confirmacoes.filter((c) => c.provaId === p.id);
+  const vou = daProva.some((c) => c.uid === estado.store.uid);
+  const amigos = new Set(estado.seguindo);
+  const amigosVao = daProva.filter((c) => amigos.has(c.uid));
   const outros = daProva.length - amigosVao.length - (vou ? 1 : 0);
-  const quem = el("div", { class: "quem" },
+  return el("div", { class: "quem" },
     amigosVao.length ? el("span", { class: "pilha" }, amigosVao.slice(0, 3).map((c) => avatar({ nome: c.nome }, true))) : null,
     el("span", {}, amigosVao.length
       ? `${nomesCurtos(amigosVao)} ${amigosVao.length === 1 ? "vai" : "vão"}${outros > 0 ? ` · +${outros}` : ""}`
       : daProva.length ? `${daProva.length} ${daProva.length === 1 ? "confirmado" : "confirmados"}` : "Seja o primeiro a confirmar"));
+}
 
+const seloPreco = (p) => el("span", { class: "selo selo--preco" }, p.preco ? `💰 ${p.preco}` : "valor a confirmar");
+
+function cartaoProva(p) {
+  const tags = etiquetas(p);
   const semZona = temZonas(cidadeDa(p)) && !p.regioes?.length;
   return el("li", { class: `cartao${p.destaque ? " cartao--gold" : ""}` },
     el("div", { class: "cartao-cab" },
       el("div", {}, el("div", { class: "cartao-nome" }, p.nome),
         el("div", { class: "meta" }, [p.horario, p.local || "local a confirmar", semZona ? null : p.regiao].filter(Boolean).join(" · "))),
       p.destaque ? el("span", { class: "selo selo--gold" }, "destaque") : null),
-    (semZona || tags.length || p.distancias?.length) ? el("div", { class: "etiquetas" },
+    el("div", { class: "etiquetas" },
+      seloPreco(p),
       semZona ? el("span", { class: "selo selo--warn" }, "zona a confirmar") : null,
       tags.includes("tematica") ? el("span", { class: "selo selo--tema" }, "temática") : null,
       tags.includes("noturna") ? el("span", { class: "selo selo--noite" }, "noturna") : null,
-      (p.distancias || []).map((d) => el("span", { class: "selo" }, d))) : null,
-    (p.organizador || p.preco) ? el("div", { class: "meta" }, [p.organizador ? `Organização: ${p.organizador}` : null, p.preco].filter(Boolean).join(" · ")) : null,
-    el("div", { class: "cartao-rodape" }, botaoVou, quem),
+      (p.distancias || []).map((d) => el("span", { class: "selo" }, d))),
+    p.organizador ? el("div", { class: "meta" }, `Organização: ${p.organizador}`) : null,
+    el("div", { class: "cartao-rodape" }, botaoVouCorrer(p, renderListaProvas), quemVai(p)),
     el("div", { class: "links" },
-      linkSeguro(p.link_inscricao, `Fazer inscrição${p.plataforma ? ` (${p.plataforma})` : ""}`),
+      linkSeguro(p.link_inscricao, `Inscrever-se no site oficial${p.plataforma ? ` (${p.plataforma})` : ""}`),
       linkSeguro(p.fonte?.url, "Fonte")),
     p.conferido === false ? el("p", { class: "dica" }, "Dados ainda não conferidos com o organizador.") : null);
 }
 
-function blocoProxima() {
-  const meuUid = estado.store.uid;
-  const minhas = new Set(estado.confirmacoes.filter((c) => c.uid === meuUid).map((c) => c.provaId));
-  const proxima = estado.provas.find((p) => minhas.has(p.id));
-  if (!proxima) return null;
-  const dias = diasAte(proxima.data, estado.store.hoje());
-  return el("div", { class: "proxima" },
-    el("div", { class: "contagem" }, dias <= 0 ? "Hoje" : String(dias), dias > 0 ? el("small", {}, dias === 1 ? "dia" : "dias") : null),
-    el("div", {}, el("small", {}, "Sua próxima prova"), el("b", {}, proxima.nome), el("small", {}, `${dataLonga(proxima.data)}${proxima.horario ? ` · ${proxima.horario}` : ""}`)));
+// Data e hora da largada (sem horário, considera 7h). Na demonstração, "agora" é 15/10/2026 ao meio-dia.
+function quandoLargada(p) { return Date.parse(`${p.data}T${p.horario || "07:00"}:00`); }
+const agoraApp = () => (estado.demo ? Date.parse(`${estado.store.hoje()}T12:00:00`) : Date.now());
+
+// Card do topo: a sua próxima prova confirmada ou, se não houver, a próxima prova com os filtros atuais.
+function cartaoDestaque(visiveis) {
+  const minhas = new Set(estado.confirmacoes.filter((c) => c.uid === estado.store.uid).map((c) => c.provaId));
+  const minha = estado.provas.find((p) => minhas.has(p.id) && quandoLargada(p) >= agoraApp());
+  const p = minha || visiveis.find((x) => quandoLargada(x) >= agoraApp()) || visiveis[0];
+  if (!p) return { el: null, id: null };
+  const falta = Math.max(0, quandoLargada(p) - agoraApp());
+  const dias = Math.floor(falta / 86400000), horas = Math.floor((falta % 86400000) / 3600000), min = Math.floor((falta % 3600000) / 60000);
+  const link = linkSeguro(p.link_inscricao, "Inscrever-se no Site Oficial");
+  if (link) link.className = "btn btn--cheio btn-inscricao";
+  return {
+    id: p.id,
+    el: el("section", { class: "destaque" },
+      el("div", { class: "rotulo-destaque" }, minha ? "Sua próxima prova" : "Próxima prova perto de você"),
+      el("div", { class: "nome" }, p.nome),
+      el("div", { class: "meta" }, `${dataLonga(p.data)}${p.horario ? ` · ${p.horario}` : ""}`),
+      el("div", { class: "meta" }, ["📍", p.local || "local a confirmar", p.organizador ? `· ${p.organizador}` : null].filter(Boolean).join(" ")),
+      el("div", { class: "etiquetas" }, seloPreco(p), (p.distancias || []).map((d) => el("span", { class: "selo" }, d))),
+      el("div", { class: "contagem-grande", "aria-label": `Faltam ${dias} dias, ${horas} horas e ${min} minutos` },
+        el("div", {}, el("b", {}, String(dias)), el("span", {}, dias === 1 ? "dia" : "dias")),
+        el("div", {}, el("b", {}, String(horas)), el("span", {}, "horas")),
+        el("div", {}, el("b", {}, String(min)), el("span", {}, "min"))),
+      el("div", { class: "cartao-rodape" }, botaoVouCorrer(p, renderListaProvas), quemVai(p)),
+      link || el("p", { class: "dica" }, "Link oficial da inscrição ainda não confirmado.")),
+  };
 }
 
 function renderListaProvas() {
   const caixa = $("#lista-provas");
   if (!caixa) return;
   const visiveis = estado.provas.filter(passaFiltros);
-  const destaques = visiveis.filter((p) => p.destaque);
-  const partes = [];
-  const prox = blocoProxima();
-  if (prox) partes.push(prox);
+  const topo = cartaoDestaque(visiveis);
+  const resto = visiveis.filter((p) => p.id !== topo.id);
+  const destaques = resto.filter((p) => p.destaque);
+  const partes = [topo.el];
   if (destaques.length) partes.push(el("h3", { class: "dia" }, "Em destaque"), el("ul", { class: "lista" }, destaques.map(cartaoProva)));
   const porDia = new Map();
-  for (const p of visiveis.filter((x) => !x.destaque)) { // as em destaque já aparecem no topo
+  for (const p of resto.filter((x) => !x.destaque)) { // as em destaque já aparecem acima
     if (!porDia.has(p.data)) porDia.set(p.data, []);
     porDia.get(p.data).push(p);
   }
@@ -1198,24 +1459,45 @@ function renderListaProvas() {
       : !naCidade ? `Ainda não há provas publicadas em ${estado.filtros.cidade}. O calendário começa por ${CIDADE} e as outras cidades vão entrando aos poucos.`
       : "Nenhuma prova com esses filtros. Tente outra zona ou tire um filtro."));
   }
-  caixa.replaceChildren(...partes);
+  caixa.replaceChildren(...partes.filter(Boolean));
 }
 
 async function telaProvas() {
   await carregarProvas();
   const f = estado.filtros;
+  const cabecalho = el("div", {});
   const caixaFiltros = el("div", { class: "filtros" });
+  let abertos = false;
   // Cidades com provas publicadas (com a contagem), mais a do perfil e a escolhida agora.
   const porCidade = new Map();
   for (const p of estado.provas) { const c = cidadeDa(p); porCidade.set(c, (porCidade.get(c) || 0) + 1); }
   for (const c of [cidadeDa(estado.perfil), f.cidade]) if (![...porCidade.keys()].some((x) => mesmaCidade(x, c))) porCidade.set(c, 0);
   const cidades = [...porCidade].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
-  const seletorCidade = el("select", { "aria-label": "Cidade das provas", class: "seletor-cidade" },
+  const seletorCidade = el("select", { "aria-label": "Cidade das provas" },
     cidades.map(([c, n]) => el("option", { value: c, selected: mesmaCidade(c, f.cidade) }, `${c} (${n} ${n === 1 ? "prova" : "provas"})`)));
   seletorCidade.addEventListener("change", () => { filtrarPelaCidade(seletorCidade.value); aplicar(); });
+  const alternar = (chave, v) => { f[chave] = f[chave] === v ? null : v; aplicar(); };
+
+  const renderCabecalho = () => {
+    const zonas = temZonas(f.cidade) && f.regioes?.size ? [...f.regioes].map((r) => NOME_REGIAO[r]).join(", ") : (temZonas(f.cidade) ? "Todas as zonas" : null);
+    const ativos = [f.preco, f.quando, f.tematica, f.noturna, f.amigos].filter(Boolean).length;
+    cabecalho.replaceChildren(
+      el("div", { class: "regiao-atual" },
+        el("span", { class: "pino", "aria-hidden": "true" }, "📍"),
+        el("div", { class: "espaco" }, el("span", { class: "rotulo", style: "margin:0" }, "Sua região"), el("b", {}, [f.cidade, zonas].filter(Boolean).join(" · "))),
+        el("button", { type: "button", class: "btn btn--sm btn--sec", "aria-expanded": String(abertos),
+          onclick: () => { abertos = !abertos; renderCabecalho(); renderFiltros(); } }, abertos ? "Fechar" : `Filtros${ativos ? ` (${ativos})` : ""}`)),
+      chipsAlternar(DISTANCIAS.map((d) => [d.chave, d.nome]), (v) => f.distancias.has(v),
+        (v) => { f.distancias.has(v) ? f.distancias.delete(v) : f.distancias.add(v); aplicar(); }, true),
+      el("div", { style: "height:6px" }),
+      chipsAlternar(PERIODOS, (v) => f.quando === v, (v) => alternar("quando", v), true));
+  };
   const renderFiltros = () => {
+    caixaFiltros.hidden = !abertos;
+    if (!abertos) return;
     caixaFiltros.replaceChildren(...[
-      el("label", { class: "linha" }, el("span", { class: "rotulo", style: "margin:0" }, "Cidade"), seletorCidade),
+      el("label", { class: "linha", style: "margin-top:10px" }, el("span", { class: "rotulo", style: "margin:0" }, "Cidade"), seletorCidade),
+      temZonas(f.cidade) && el("span", { class: "rotulo", style: "margin:4px 0 0" }, "Zonas"),
       temZonas(f.cidade) && chipsAlternar([["todas", "Todas"], ...REGIOES.map((r) => [r, NOME_REGIAO[r]])],
         (v) => (v === "todas" ? !f.regioes || !f.regioes.size : f.regioes?.has(v)),
         (v) => {
@@ -1226,33 +1508,69 @@ async function telaProvas() {
           }
           aplicar();
         }, true),
-      chipsAlternar([...DISTANCIAS.map((d) => [d.chave, d.nome]), ["tematica", "🎭 Temáticas"], ["noturna", "🌙 Noturnas"], ["amigos", "Onde amigos vão"]],
-        (v) => (v === "tematica" ? f.tematica : v === "noturna" ? f.noturna : v === "amigos" ? f.amigos : f.distancias.has(v)),
-        (v) => {
-          if (v === "tematica") f.tematica = !f.tematica;
-          else if (v === "noturna") f.noturna = !f.noturna;
-          else if (v === "amigos") f.amigos = !f.amigos;
-          else f.distancias.has(v) ? f.distancias.delete(v) : f.distancias.add(v);
-          aplicar();
-        }, true)].filter(Boolean));
+      el("span", { class: "rotulo", style: "margin:4px 0 0" }, "Preço"),
+      chipsAlternar(PRECOS, (v) => f.preco === v, (v) => alternar("preco", v), true),
+      el("span", { class: "rotulo", style: "margin:4px 0 0" }, "Mais"),
+      chipsAlternar([["tematica", "🎭 Temáticas"], ["noturna", "🌙 Noturnas"], ["amigos", "Onde amigos vão"]],
+        (v) => Boolean(f[v]), (v) => { f[v] = !f[v]; aplicar(); }, true)].filter(Boolean));
   };
-  const aplicar = () => { salvarPreferencias(); renderFiltros(); renderListaProvas(); };
+  const aplicar = () => { salvarPreferencias(); renderCabecalho(); renderFiltros(); renderListaProvas(); };
+  renderCabecalho();
   renderFiltros();
   tela(
     estado.demo ? el("p", { class: "aviso" }, "Demonstração: provas da amostra do projeto piloto (links fictícios), e algumas de exemplo em Campinas e Santos. A data de hoje está fixa em 15/10/2026.") : null,
+    cabecalho,
     caixaFiltros,
     el("div", { id: "lista-provas" }));
   renderListaProvas();
 }
 
-// ---------- Amigos e atividade ----------
-async function telaAtividade() {
+// ---------- Feed (comunidade): provas confirmadas e chegadas. Treinos não aparecem aqui. ----------
+function linhaPessoa(p, aoMudar) {
+  const sigo = estado.seguindo.includes(p.uid);
+  const botao = el("button", { type: "button", class: `btn btn--sm ${sigo ? "btn--sec" : ""}` }, sigo ? "Seguindo" : "Seguir");
+  botao.addEventListener("click", () => executar(botao, async () => {
+    await estado.store.seguir(p.uid, !sigo);
+    toast(sigo ? `Você deixou de seguir ${p.nome.split(" ")[0]}.` : `Agora você segue ${p.nome.split(" ")[0]}.`);
+    aoMudar();
+  }));
+  return el("div", { class: "pessoa" }, avatar(p),
+    el("div", { class: "info" }, el("b", {}, p.nome), el("span", {}, [`@${p.handle}`, cidadeDa(p), NOME_REGIAO[p.regiao]].filter(Boolean).join(" · "))),
+    linkInsta(p.instagram), botao);
+}
+
+function cartaoPost(e, quem, prova) {
+  const nome = e.uid === estado.store.uid ? "Você" : (quem?.nome || e.nome || "Corredor");
+  const cab = el("div", { class: "post-cab" }, avatar(quem || { nome }),
+    el("div", { class: "info" }, el("b", {}, nome), el("span", {}, [quandoRelativo(e.em), quem ? cidadeDa(quem) : null].filter(Boolean).join(" · "))));
+  if (e.tipo === "conclusao") {
+    const ritmo = e.tempoSeg ? ritmoDe(e.tempoSeg, e.distanciaKm * 1000) : null;
+    return el("li", { class: "post" }, cab,
+      el("p", { class: "post-texto" }, "Cruzou a linha de chegada! 🎉"),
+      el("div", { class: "post-faixa" }, el("b", {}, `🏁 ${e.provaNome}`),
+        el("span", {}, [km(e.distanciaKm), e.tempoSeg ? tempoTexto(e.tempoSeg) : null, ritmo, dataBR(e.data)].filter(Boolean).join(" · "))));
+  }
+  return el("li", { class: "post" }, cab,
+    el("p", { class: "post-texto" }, "Vai correr 🏃"),
+    el("div", { class: "post-prova" }, el("b", {}, prova ? prova.nome : "uma prova"),
+      el("span", {}, prova ? [`${dataLonga(prova.data)}${prova.horario ? ` · ${prova.horario}` : ""}`, prova.local].filter(Boolean).join(" · ") : "")));
+}
+
+async function telaFeed() {
   const seguindo = await estado.store.seguindo();
   estado.seguindo = seguindo;
-  const [pessoas, feed, nSeguidores] = await Promise.all([
-    estado.store.usuarios(seguindo), estado.store.feed(seguindo), estado.store.seguidores(estado.store.uid),
+  const [pessoas, feed, daCidade] = await Promise.all([
+    estado.store.usuarios([...seguindo, estado.store.uid]), estado.store.feed([...seguindo, estado.store.uid]),
+    estado.store.usuariosDaCidade(cidadeDa(estado.perfil)).catch(() => []),
   ]);
-  const provasPorId = Object.fromEntries((estado.provas.length ? estado.provas : await estado.store.provas()).map((p) => [p.id, p]));
+  if (!estado.provas.length) await carregarProvas();
+  const provasPorId = Object.fromEntries(estado.provas.map((p) => [p.id, p]));
+  const recarregar = () => irPara("feed");
+  // "Vai correr" de prova que já passou não interessa mais (a chegada aparece como "concluiu").
+  const hoje = estado.store.hoje();
+  const visiveis = feed.filter((e) => e.tipo !== "confirmacao" || e.data >= hoje);
+  const faltam = [...new Set(visiveis.filter((e) => e.tipo === "confirmacao" && !provasPorId[e.provaId]).map((e) => e.provaId))];
+  for (const p of await Promise.all(faltam.map((id) => estado.store.provaPorId(id).catch(() => null)))) if (p) provasPorId[p.id] = p;
 
   const resultados = el("div", {});
   const busca = el("input", { type: "search", placeholder: "Buscar por nome ou @usuário", "aria-label": "Buscar corredores", enterkeyhint: "search" });
@@ -1261,43 +1579,26 @@ async function telaAtividade() {
     clearTimeout(temporizador);
     temporizador = setTimeout(async () => {
       const lista = await estado.store.buscarUsuarios(busca.value).catch(() => []);
-      resultados.replaceChildren(...(busca.value.trim().length < 2 ? [] : lista.length ? lista.map((p) => linhaPessoa(p)) : [el("p", { class: "dica" }, "Ninguém encontrado.")]));
+      resultados.replaceChildren(...(busca.value.trim().length < 2 ? [] : lista.length ? lista.map((p) => linhaPessoa(p, recarregar)) : [el("p", { class: "dica" }, "Ninguém encontrado.")]));
     }, 300);
   });
 
-  function linhaPessoa(p) {
-    const sigo = estado.seguindo.includes(p.uid);
-    const botao = el("button", { type: "button", class: `btn btn--sm ${sigo ? "btn--sec" : ""}` }, sigo ? "Seguindo" : "Seguir");
-    botao.addEventListener("click", () => executar(botao, async () => {
-      await estado.store.seguir(p.uid, !sigo);
-      toast(sigo ? `Você deixou de seguir ${p.nome.split(" ")[0]}.` : `Agora você segue ${p.nome.split(" ")[0]}.`);
-      irPara("atividade");
-    }));
-    return el("div", { class: "pessoa" }, avatar(p),
-      el("div", { class: "info" }, el("b", {}, p.nome), el("span", {}, [`@${p.handle}`, NOME_REGIAO[p.regiao]].filter(Boolean).join(" · "))),
-      linkInsta(p.instagram), botao);
-  }
-
-  const eventos = feed.map((e) => {
-    const quem = pessoas[e.uid] || { nome: e.nome };
-    let texto;
-    if (e.tipo === "confirmacao") {
-      const prova = provasPorId[e.provaId];
-      texto = [el("b", {}, quem.nome.split(" ")[0]), ` vai correr ${prova ? prova.nome : "uma prova"}`, prova ? ` (${dataBR(prova.data)})` : ""];
-    } else {
-      texto = [el("b", {}, quem.nome.split(" ")[0]), ` correu ${km(e.km)}`, e.minutos ? ` em ${e.minutos} min` : "", e.descricao ? ` · ${e.descricao}` : ""];
-    }
-    return el("div", { class: "evento" }, avatar(quem, true), el("div", {}, ...texto, el("span", { class: "quando" }, e.tipo === "treino" ? dataBR(e.data) : quandoRelativo(e.em))));
-  });
+  const posts = visiveis.map((e) => cartaoPost(e, pessoas[e.uid], provasPorId[e.provaId]));
+  const sugestoes = daCidade.filter((p) => !seguindo.includes(p.uid)).slice(0, 6);
 
   tela(
-    el("section", { class: "painel" }, el("h2", {}, "Encontrar corredores"), busca, resultados),
     el("section", { class: "painel" },
-      el("h2", {}, "Atividade dos amigos"),
-      eventos.length ? eventos : el("p", { class: "vazio" }, seguindo.length ? "Seus amigos ainda não confirmaram provas nem lançaram treinos." : "Siga alguém para ver aqui as provas e os treinos dessa pessoa.")),
+      el("h2", {}, "Comunidade"),
+      el("p", { class: "dica", style: "margin-top:0" }, "Quem vai em cada prova e quem cruzou a linha de chegada. Seus treinos não aparecem aqui."),
+      busca, resultados),
+    posts.length ? el("ul", { class: "lista", style: "margin-bottom:14px" }, posts)
+      : el("p", { class: "vazio" }, seguindo.length ? "Seus amigos ainda não confirmaram nem concluíram provas." : "Siga corredores para ver aqui as provas deles."),
+    sugestoes.length ? el("section", { class: "painel" }, el("h2", {}, `Corredores de ${cidadeDa(estado.perfil)}`), sugestoes.map((p) => linhaPessoa(p, recarregar))) : null,
+    await secaoGrupos(),
+    await secaoParceiros(),
     el("section", { class: "painel" },
-      el("h2", {}, `Seguindo (${seguindo.length}) · ${nSeguidores} ${nSeguidores === 1 ? "seguidor" : "seguidores"}`),
-      seguindo.length ? Object.values(pessoas).map((p) => linhaPessoa(p)) : el("p", { class: "dica" }, "Você ainda não segue ninguém.")));
+      el("h2", {}, `Seguindo (${seguindo.length})`),
+      seguindo.length ? seguindo.map((u) => pessoas[u]).filter(Boolean).map((p) => linhaPessoa(p, recarregar)) : el("p", { class: "dica" }, "Você ainda não segue ninguém.")));
 }
 
 // ---------- Strava (só o próprio atleta vê) ----------
@@ -1422,7 +1723,7 @@ function seloStrava() {
   return el("p", { class: "dica powered-strava" }, "Dados do ", el("b", {}, "Strava"), " · visíveis só para você");
 }
 
-// Painel da aba Treinos. Monta um esqueleto na hora e preenche quando o Strava responder.
+// Painel do Strava (aba Meu Painel). Monta um esqueleto na hora e preenche quando o Strava responder.
 function painelStrava() {
   if (!STRAVA_API && !estado.demo) return null;
   const caixa = el("section", { class: "painel" }, el("h2", {}, "Seu Strava"), el("p", { class: "carregando" }, "Carregando..."));
@@ -1465,7 +1766,7 @@ function painelStrava() {
     const sair = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, "Desconectar");
     sair.addEventListener("click", () => {
       if (!confirmarAcao(sair, "Toque de novo para desconectar")) return;
-      executar(sair, async () => { await Strava.desconectar(); toast("Strava desconectado."); irPara("treinos"); });
+      executar(sair, async () => { await Strava.desconectar(); toast("Strava desconectado."); irPara("painel"); });
     });
 
     corpo(
@@ -1483,6 +1784,12 @@ function painelStrava() {
           el("span", { class: "barra-valor" }, String(Math.round(s.km))),
           el("div", { class: "barra-col", style: `height:${Math.max(3, Math.round((s.km / maior) * 100))}%` }),
           el("span", { class: "barra-rotulo" }, i === semanas.length - 1 ? "atual" : `-${semanas.length - 1 - i}`)))),
+      (() => {
+        const ritmo = porSemana(corridas.map((c) => ({ quando: Date.parse(c.start_date), metros: c.distance, segundos: c.moving_time })), agora);
+        return ritmo.some((s) => s.ritmo) ? [el("h3", {}, "Ritmo por semana (min/km)"),
+          graficoBarras(barrasRitmo(ritmo), `Ritmo médio por semana: ${ritmo.map((s) => ritmoCurto(s.ritmo) || "sem corrida").join(", ")}`),
+          el("p", { class: "dica" }, "Barra mais alta = mais rápido.")] : null;
+      })(),
       el("h3", {}, "Últimas corridas"),
       corridas.length ? corridas.slice(0, 8).map((c) => el("div", { class: "pessoa" }, el("div", { class: "info" },
         el("b", {}, `${km(c.distance / 1000)} · ${c.name || "Corrida"}`),
@@ -1501,14 +1808,137 @@ function painelStrava() {
   return caixa;
 }
 
-// ---------- Treinos ----------
-async function telaTreinos() {
-  const lista = await estado.store.treinos(estado.store.uid);
+// ---------- Gráfico de barras simples (km por semana, ritmo por semana) ----------
+// valores: [{ rotulo, valor, texto }]; a última barra (a semana atual) fica em laranja.
+function graficoBarras(valores, descricao) {
+  const maior = Math.max(1e-9, ...valores.map((v) => v.valor || 0));
+  return el("div", { class: "barras", role: "img", "aria-label": descricao },
+    valores.map((v) => el("div", { class: "barra" },
+      el("span", { class: "barra-valor" }, v.texto ?? ""),
+      el("div", { class: "barra-col", style: `height:${v.valor ? Math.max(3, Math.round((v.valor / maior) * 100)) : 0}%` }),
+      el("span", { class: "barra-rotulo" }, v.rotulo))));
+}
+
+// Agrupa itens com { quando (ms), metros, segundos } nas últimas 8 semanas (da mais antiga para a atual).
+function porSemana(itens, agora) {
+  const semanas = Array.from({ length: 8 }, (_, i) => ({ fim: agora - (7 - i) * 7 * 86400000, metros: 0, segundos: 0, metrosComTempo: 0 }));
+  for (const it of itens) {
+    const s = semanas.find((x) => it.quando <= x.fim && it.quando > x.fim - 7 * 86400000);
+    if (!s) continue;
+    s.metros += it.metros;
+    if (it.segundos) { s.segundos += it.segundos; s.metrosComTempo += it.metros; }
+  }
+  return semanas.map((s, i) => ({
+    ...s, rotulo: i === 7 ? "atual" : `-${7 - i}`,
+    ritmo: s.metrosComTempo ? s.segundos / (s.metrosComTempo / 1000) : null, // segundos por km
+  }));
+}
+const ritmoCurto = (sPorKm) => (sPorKm ? `${Math.floor(sPorKm / 60)}:${String(Math.round(sPorKm % 60)).padStart(2, "0")}` : "");
+// Ritmo: barra mais alta = mais rápido (o inverso do tempo por km).
+const barrasRitmo = (semanas) => semanas.map((s) => ({ rotulo: s.rotulo, valor: s.ritmo ? 3600 / s.ritmo : 0, texto: ritmoCurto(s.ritmo) }));
+const barrasKm = (semanas) => semanas.map((s) => ({ rotulo: s.rotulo, valor: s.metros / 1000, texto: String(Math.round(s.metros / 1000)) }));
+
+// ---------- Meu Painel (privado: só o próprio atleta vê) ----------
+async function telaPainel() {
+  const uid = estado.store.uid;
   const hoje = estado.store.hoje();
+  if (!estado.provas.length) await carregarProvas();
+  const [lista, confirmadas, conclusoes] = await Promise.all([
+    estado.store.treinos(uid), estado.store.minhasConfirmacoes(), estado.store.minhasConclusoes(),
+  ]);
   const mes = hoje.slice(0, 7), ano = hoje.slice(0, 4);
   const soma = (f) => lista.filter(f).reduce((s, t) => s + t.km, 0);
-  const minhasProvas = (estado.confirmacoes.length ? estado.confirmacoes : await estado.store.confirmacoes()).filter((c) => c.uid === estado.store.uid).length;
+  const doAno = conclusoes.filter((c) => c.data.startsWith(ano));
+  const ritmos = conclusoes.filter((c) => c.tempoSeg && c.distanciaKm).map((c) => c.tempoSeg / c.distanciaKm);
+  const melhorRitmo = ritmos.length ? Math.min(...ritmos) : null;
 
+  // Termômetro: o maior treino das últimas 4 semanas contra a distância da próxima prova confirmada.
+  const proxima = estado.provas.filter((p) => confirmadas.some((c) => c.provaId === p.id) && p.data >= hoje)
+    .sort((a, b) => a.data.localeCompare(b.data))[0];
+  const limite4 = new Date(Date.parse(`${hoje}T12:00:00`) - 28 * 86400000).toISOString().slice(0, 10);
+  const maiorTreino = Math.max(0, ...lista.filter((t) => t.data >= limite4).map((t) => t.km));
+  const alvo = proxima ? Math.max(0, ...distanciasEmKm(proxima.distancias)) : 0;
+  let termometro = null;
+  if (proxima) {
+    const dias = diasAte(proxima.data, hoje);
+    const pronto = alvo && maiorTreino >= alvo * 0.75;
+    termometro = el("section", { class: "painel" },
+      el("h2", {}, "Termômetro da próxima prova"),
+      el("p", { class: "dica", style: "margin-top:0" }, `${proxima.nome} · ${dataLonga(proxima.data)} · faltam ${dias} ${dias === 1 ? "dia" : "dias"}`),
+      el("p", { class: pronto ? "ok" : "aviso" }, !alvo
+        ? "A distância dessa prova ainda não foi informada."
+        : maiorTreino
+          ? (pronto
+            ? `Seu maior treino nas últimas 4 semanas foi de ${km(maiorTreino)}. Para ${km(alvo)}, você está no caminho certo.`
+            : `Seu maior treino nas últimas 4 semanas foi de ${km(maiorTreino)}. Para ${km(alvo)}, vale aumentar aos poucos o treino mais longo.`)
+          : `Lance seus treinos (ou conecte o Strava) para acompanhar o preparo para ${km(alvo)}.`));
+  }
+
+  // Ritmo por semana com os treinos lançados no Ritmex (os que têm tempo).
+  const semanas = porSemana(lista.map((t) => ({ quando: Date.parse(`${t.data}T12:00:00`), metros: t.km * 1000, segundos: t.minutos ? t.minutos * 60 : 0 })),
+    agoraApp());
+  const temRitmo = semanas.some((s) => s.ritmo);
+
+  tela(
+    el("p", { class: "dica", style: "margin:0 0 10px" }, "🔒 Só você vê esta tela. Treinos e dados do Strava não aparecem no feed nem no ranking."),
+    el("div", { class: "numeros" },
+      el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(ano)))), el("span", {}, `treinos em ${ano}`)),
+      el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(mes)))), el("span", {}, "treinos neste mês")),
+      el("div", { class: "numero" }, el("b", {}, String(doAno.length)), el("span", {}, `provas concluídas em ${ano}`)),
+      el("div", { class: "numero" }, el("b", {}, melhorRitmo ? `${ritmoCurto(melhorRitmo)} /km` : "—"), el("span", {}, "melhor ritmo em prova"))),
+    termometro,
+    painelStrava(),
+    el("section", { class: "painel" },
+      el("h2", {}, "Evolução do ritmo"),
+      temRitmo
+        ? [graficoBarras(barrasRitmo(semanas), `Ritmo médio por semana: ${semanas.map((s) => ritmoCurto(s.ritmo) || "sem treino").join(", ")}`),
+          el("p", { class: "dica" }, "Ritmo médio por semana (min/km) dos treinos lançados aqui. Barra mais alta = mais rápido.")]
+        : el("p", { class: "dica" }, "Lance treinos com o tempo (ou conecte o Strava) para ver a evolução do seu ritmo.")),
+    await secaoMinhasProvas(confirmadas, conclusoes),
+    secaoLancarTreino(),
+    el("section", { class: "painel" }, el("h2", {}, "Histórico de treinos"), historicoTreinos(lista)));
+}
+
+// Provas que você confirmou e já passaram: marcar como concluída (com o tempo) e ver as concluídas.
+async function secaoMinhasProvas(confirmadas, conclusoes) {
+  const hoje = estado.store.hoje();
+  const feitas = new Set(conclusoes.map((c) => c.provaId));
+  const pendentes = confirmadas.filter((c) => c.data < hoje && !feitas.has(c.provaId)).sort((a, b) => b.data.localeCompare(a.data));
+  const provas = await Promise.all(pendentes.map((c) => estado.store.provaPorId(c.provaId).catch(() => null)));
+  const itensPendentes = provas.filter(Boolean).map((p) => {
+    const kmProva = el("input", { type: "text", inputmode: "decimal", placeholder: "km", "aria-label": `Distância corrida em ${p.nome}`,
+      value: String(Math.max(0, ...distanciasEmKm(p.distancias)) || "").replace(".", ",") });
+    const tempo = el("input", { type: "text", inputmode: "numeric", placeholder: "tempo (52:10)", "aria-label": `Tempo em ${p.nome}` });
+    const ok = el("button", { type: "button", class: "btn btn--sm" }, "Concluí");
+    ok.addEventListener("click", () => executar(ok, async () => {
+      await estado.store.concluir(p, kmProva.value, tempo.value, estado.perfil.nome);
+      toast("Parabéns pela prova! 🏁 Ela aparece no feed dos seus amigos.");
+      irPara("painel");
+    }));
+    return el("div", { class: "pessoa", style: "flex-wrap:wrap" },
+      el("div", { class: "info", style: "flex-basis:100%" }, el("b", {}, p.nome), el("span", {}, `${dataBR(p.data)} · ${p.local || ""}`)),
+      el("div", { class: "linha", style: "flex:1" }, kmProva, tempo, ok));
+  });
+  const itensFeitas = [...conclusoes].sort((a, b) => b.data.localeCompare(a.data)).map((c) => {
+    const tirar = el("button", { type: "button", class: "btn btn--sm btn--sec", "aria-label": `Desfazer conclusão de ${c.provaNome}` }, "Desfazer");
+    tirar.addEventListener("click", () => {
+      if (!confirmarAcao(tirar, "Toque de novo")) return;
+      executar(tirar, async () => { await estado.store.removerConclusao(c.provaId); irPara("painel"); });
+    });
+    return el("div", { class: "pessoa" },
+      el("div", { class: "info" }, el("b", {}, `🏁 ${c.provaNome}`),
+        el("span", {}, [dataBR(c.data), km(c.distanciaKm), c.tempoSeg ? tempoTexto(c.tempoSeg) : null, c.tempoSeg ? ritmoDe(c.tempoSeg, c.distanciaKm * 1000) : null].filter(Boolean).join(" · "))),
+      tirar);
+  });
+  return el("section", { class: "painel" },
+    el("h2", {}, "Minhas provas"),
+    itensPendentes.length ? [el("h3", {}, "Já passaram: como foi?"), ...itensPendentes] : null,
+    el("h3", {}, "Concluídas"),
+    itensFeitas.length ? itensFeitas : el("p", { class: "dica" }, "Confirme provas na aba Provas; depois da data, marque aqui como concluída."));
+}
+
+function secaoLancarTreino() {
+  const hoje = estado.store.hoje();
   const erro = el("p", { class: "erro", role: "alert", hidden: true });
   const campos = {
     data: el("input", { id: "tr-data", type: "date", value: hoje, max: hoje }),
@@ -1557,33 +1987,26 @@ async function telaTreinos() {
         erro.hidden = false;
         return;
       }
-      toast("Treino salvo!");
-      irPara("treinos");
+      toast("Treino salvo! Só você vê.");
+      irPara("painel");
     });
   });
-
-  const itens = lista.slice(0, 60).map((t) => {
-    const remover = el("button", { type: "button", class: "btn btn--sm btn--sec", "aria-label": `Apagar treino de ${dataBR(t.data)}` }, "Apagar");
-    remover.addEventListener("click", () => executar(remover, async () => { await estado.store.removerTreino(t.id); irPara("treinos"); }));
-    const ritmo = t.minutos ? `${Math.floor(t.minutos / t.km)}:${String(Math.round(((t.minutos / t.km) % 1) * 60)).padStart(2, "0")} /km` : null;
-    return el("div", { class: "pessoa" },
-      el("div", { class: "info" }, el("b", {}, km(t.km)), el("span", {}, [dataBR(t.data), t.minutos ? `${t.minutos} min` : null, ritmo, t.descricao, t.origem === "gpx" ? "GPX" : null].filter(Boolean).join(" · "))),
-      remover);
-  });
-
-  tela(
-    el("div", { class: "numeros" },
-      el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(mes)))), el("span", {}, "neste mês")),
-      el("div", { class: "numero" }, el("b", {}, km(soma((t) => t.data.startsWith(ano)))), el("span", {}, `em ${ano}`)),
-      el("div", { class: "numero" }, el("b", {}, String(lista.filter((t) => t.data.startsWith(ano)).length)), el("span", {}, `treinos em ${ano}`)),
-      el("div", { class: "numero" }, el("b", {}, String(minhasProvas)), el("span", {}, "provas confirmadas"))),
-    painelStrava(),
-    el("section", { class: "painel" }, el("h2", {}, "Lançar treino"), form),
-    el("section", { class: "painel" }, el("h2", {}, "Histórico"), itens.length ? itens : el("p", { class: "vazio" }, "Nenhum treino ainda. Lance o primeiro acima.")));
+  return el("section", { class: "painel" }, el("h2", {}, "Lançar treino"), form);
 }
 
-// ---------- Grupos e ranking ----------
-async function telaGrupos() {
+function historicoTreinos(lista) {
+  if (!lista.length) return el("p", { class: "vazio" }, "Nenhum treino ainda. Lance o primeiro acima.");
+  return lista.slice(0, 60).map((t) => {
+    const remover = el("button", { type: "button", class: "btn btn--sm btn--sec", "aria-label": `Apagar treino de ${dataBR(t.data)}` }, "Apagar");
+    remover.addEventListener("click", () => executar(remover, async () => { await estado.store.removerTreino(t.id); irPara("painel"); }));
+    return el("div", { class: "pessoa" },
+      el("div", { class: "info" }, el("b", {}, km(t.km)), el("span", {}, [dataBR(t.data), t.minutos ? `${t.minutos} min` : null, t.minutos ? ritmoDe(t.minutos * 60, t.km * 1000) : null, t.descricao, t.origem === "gpx" ? "GPX" : null].filter(Boolean).join(" · "))),
+      remover);
+  });
+}
+
+// ---------- Grupos (no Feed): ranking por km em PROVAS concluídas (os treinos são privados) ----------
+async function secaoGrupos() {
   const grupos = await estado.store.meusGrupos();
   const hoje = estado.store.hoje();
   const nome = el("input", { type: "text", maxlength: "40", placeholder: "ex.: Turma do Ibirapuera", "aria-label": "Nome do grupo" });
@@ -1593,39 +2016,26 @@ async function telaGrupos() {
   criar.addEventListener("click", () => executar(criar, async () => {
     const g = await estado.store.criarGrupo(nome.value);
     toast(`Grupo criado! Código: ${g.codigo}`);
-    irPara("grupos");
+    irPara("feed");
   }));
   entrar.addEventListener("click", () => executar(entrar, async () => {
     const g = await estado.store.entrarGrupo(codigo.value);
     toast(`Você entrou em ${g.nome}.`);
-    irPara("grupos");
+    irPara("feed");
   }));
 
   const cartoes = [];
   for (const g of grupos) {
-    let periodo = "mes";
-    const corpo = el("div", {});
     const membros = await estado.store.usuarios(g.membros);
-    const renderRanking = async () => {
-      const desde = periodo === "mes" ? `${hoje.slice(0, 7)}-01` : `${hoje.slice(0, 4)}-01-01`;
-      const treinos = await estado.store.treinosDe(g.membros, desde);
-      const linhas = g.membros.map((u) => {
-        const meus = treinos.filter((t) => t.uid === u && t.data <= hoje);
-        return { uid: u, nome: membros[u]?.nome || "Corredor", km: meus.reduce((s, t) => s + t.km, 0), n: meus.length };
-      }).sort((a, b) => b.km - a.km);
-      corpo.replaceChildren(
-        chipsAlternar([["mes", "Este mês"], ["ano", `Ano de ${hoje.slice(0, 4)}`]], (v) => v === periodo, (v) => { periodo = v; renderRanking(); }),
-        el("table", { class: "ranking", style: "margin-top:8px" },
-          el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", {}, "Corredor"), el("th", { class: "num" }, "Treinos"), el("th", { class: "num" }, "Km"))),
-          el("tbody", {}, linhas.map((l, i) => el("tr", { class: l.uid === estado.store.uid ? "eu" : null },
-            el("td", {}, i === 0 && l.km > 0 ? "🥇" : i === 1 && l.km > 0 ? "🥈" : i === 2 && l.km > 0 ? "🥉" : String(i + 1)),
-            el("td", {}, l.nome), el("td", { class: "num" }, String(l.n)), el("td", { class: "num" }, km(l.km)))))));
-    };
-    await renderRanking();
-    const sair = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, g.dono === estado.store.uid ? "Apagar grupo" : "Sair do grupo");
+    const provas = await estado.store.conclusoesDe(g.membros, `${hoje.slice(0, 4)}-01-01`);
+    const linhas = g.membros.map((u) => {
+      const minhas = provas.filter((c) => c.uid === u);
+      return { uid: u, nome: membros[u]?.nome || "Corredor", km: minhas.reduce((s, c) => s + (c.distanciaKm || 0), 0), n: minhas.length };
+    }).sort((a, b) => b.km - a.km || b.n - a.n);
+    const sair = el("button", { type: "button", class: "btn btn--sm btn--perigo" }, g.dono === estado.store.uid ? "Apagar" : "Sair");
     sair.addEventListener("click", () => {
-      if (!confirmarAcao(sair, g.dono === estado.store.uid ? "Toque de novo para apagar" : "Toque de novo para sair")) return;
-      executar(sair, async () => { await estado.store.sairGrupo(g.id); irPara("grupos"); });
+      if (!confirmarAcao(sair, g.dono === estado.store.uid ? "Toque de novo" : "Toque de novo")) return;
+      executar(sair, async () => { await estado.store.sairGrupo(g.id); irPara("feed"); });
     });
     const compartilhar = el("button", { type: "button", class: "btn btn--sm btn--sec" }, "Convidar");
     compartilhar.addEventListener("click", async () => {
@@ -1635,20 +2045,24 @@ async function telaGrupos() {
         else { await navigator.clipboard.writeText(texto); toast("Convite copiado."); }
       } catch { /* compartilhamento cancelado */ }
     });
-    cartoes.push(el("section", { class: "painel" },
-      el("div", { class: "cartao-cab" }, el("div", {}, el("h2", { style: "margin:0" }, g.nome),
+    cartoes.push(el("div", { class: "cartao", style: "margin-bottom:10px" },
+      el("div", { class: "cartao-cab" }, el("div", {}, el("div", { class: "cartao-nome" }, g.nome),
         el("div", { class: "meta" }, `${g.membros.length} ${g.membros.length === 1 ? "membro" : "membros"} · código `, el("span", { class: "codigo" }, g.codigo))),
         el("div", { class: "linha" }, compartilhar, sair)),
-      corpo));
+      el("table", { class: "ranking", style: "margin-top:8px" },
+        el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", {}, "Corredor"), el("th", { class: "num" }, "Provas"), el("th", { class: "num" }, "Km em provas"))),
+        el("tbody", {}, linhas.map((l, i) => el("tr", { class: l.uid === estado.store.uid ? "eu" : null },
+          el("td", {}, i === 0 && l.km > 0 ? "🥇" : i === 1 && l.km > 0 ? "🥈" : i === 2 && l.km > 0 ? "🥉" : String(i + 1)),
+          el("td", {}, l.nome), el("td", { class: "num" }, String(l.n)), el("td", { class: "num" }, km(l.km))))))));
   }
 
-  tela(
-    ...cartoes,
-    grupos.length ? null : el("p", { class: "vazio" }, "Crie um grupo com os amigos da corrida e disputem quem corre mais no mês."),
-    el("section", { class: "painel" },
-      el("h2", {}, "Novo grupo"), el("div", { class: "linha" }, nome, criar),
-      el("h3", {}, "Entrar com um código"), el("div", { class: "linha" }, codigo, entrar),
-      el("p", { class: "dica" }, `O ranking soma os treinos lançados por cada membro. Até ${LIMITE_IN} pessoas por grupo no piloto.`)));
+  return el("section", { class: "painel" },
+    el("h2", {}, "Grupos"),
+    cartoes.length ? cartoes : el("p", { class: "dica", style: "margin-top:0" }, "Crie um grupo com a turma da corrida e vejam quem completa mais provas no ano."),
+    el("details", { class: "mais", style: "margin-top:8px" }, el("summary", {}, "Criar ou entrar num grupo"),
+      el("div", { class: "linha", style: "margin-top:10px" }, nome, criar),
+      el("div", { class: "linha", style: "margin-top:8px" }, codigo, entrar)),
+    el("p", { class: "dica" }, `O ranking soma os km das provas concluídas no ano (os treinos são privados). Até ${LIMITE_IN} pessoas por grupo no piloto.`));
 }
 
 // Pede um segundo toque para ações destrutivas (sem confirm(), que bloqueia a página).
@@ -1661,11 +2075,10 @@ function confirmarAcao(botao, texto) {
   return false;
 }
 
-// ---------- Parceiros ----------
-async function telaParceiros() {
+// ---------- Assessorias e parceiros (no Feed) ----------
+async function secaoParceiros() {
   const todos = await estado.store.parceiros();
   let categoria = "todas";
-  let soRegiao = Boolean(estado.perfil);
   const minhaCidade = cidadeDa(estado.perfil);
   const minhaZona = temZonas(minhaCidade) ? estado.perfil?.regiao : "";
   // Perto de mim = atende online, ou é da minha cidade (a cidade toda, ou a minha zona em São Paulo).
@@ -1674,27 +2087,24 @@ async function telaParceiros() {
   const ondeAtende = (p) => (p.regiao === "online" ? "Atende online" : [NOME_REGIAO[p.regiao], cidadeDa(p)].filter(Boolean).join(" · "));
   const caixa = el("div", {});
   const render = () => {
-    const lista = todos.filter((p) => (categoria === "todas" || p.categoria === categoria) && (!soRegiao || perto(p)));
+    const lista = todos.filter((p) => (categoria === "todas" || p.categoria === categoria) && perto(p));
     caixa.replaceChildren(
       chipsAlternar([["todas", "Todos"], ...Object.entries(CATEGORIAS)], (v) => v === categoria, (v) => { categoria = v; render(); }, true),
-      el("label", { class: "opcao" }, Object.assign(el("input", { type: "checkbox", onchange: (e) => { soRegiao = e.target.checked; render(); } }), { checked: soRegiao }),
-        `Só de ${minhaZona ? `${minhaCidade}, ${NOME_REGIAO[minhaZona].toLowerCase()}` : minhaCidade} e atendimento online`),
-      lista.length ? el("ul", { class: "lista" }, lista.map((p) => el("li", { class: "cartao" },
-        el("div", { class: "cartao-cab" }, el("div", {}, el("div", { class: "cartao-nome" }, p.nome),
-          el("div", { class: "meta" }, `${CATEGORIAS[p.categoria]} · ${ondeAtende(p)}`))),
+      lista.length ? el("ul", { class: "lista", style: "margin-top:10px" }, lista.map((p) => el("li", { class: "cartao" },
+        el("div", { class: "cartao-nome" }, p.nome),
+        el("div", { class: "meta" }, `${CATEGORIAS[p.categoria]} · ${ondeAtende(p)}`),
         p.descricao ? el("p", { class: "meta", style: "color:var(--text)" }, p.descricao) : null,
         el("div", { class: "links" }, linkInsta(p.instagram), linkWhats(p.whatsapp, "WhatsApp"), linkSeguro(p.site, "Site")))))
-        : el("p", { class: "vazio" }, "Nenhum parceiro com esses filtros ainda."));
+        : el("p", { class: "vazio" }, "Nenhum parceiro na sua região ainda."));
   };
   render();
-  tela(
-    el("p", { class: "dica" }, "Profissionais que atendem corredores: nutrição, fisioterapia, assessorias e treinadores."),
+  return el("section", { class: "painel" },
+    el("h2", {}, "Assessorias e parceiros"),
+    el("p", { class: "dica", style: "margin-top:0" }, `Nutrição, fisioterapia, assessorias e treinadores de ${minhaZona ? `${minhaCidade}, ${NOME_REGIAO[minhaZona].toLowerCase()}` : minhaCidade} e online.`),
     caixa,
-    el("section", { class: "painel", style: "margin-top:14px" }, el("h2", {}, "É profissional da corrida?"),
-      el("p", { class: "dica" }, "Fale com a gente para aparecer aqui para os corredores da sua região."),
-      /^(mailto:|https:\/\/)/.test(CONTATO_PARCEIROS)
-        ? el("a", { href: CONTATO_PARCEIROS, class: "btn btn--sec", style: "display:inline-block;text-decoration:none", target: "_blank", rel: "noopener noreferrer" }, "Quero ser parceiro")
-        : null));
+    /^(mailto:|https:\/\/)/.test(CONTATO_PARCEIROS)
+      ? el("p", { class: "dica" }, "É profissional da corrida? ", el("a", { href: CONTATO_PARCEIROS, target: "_blank", rel: "noopener noreferrer" }, "Quero ser parceiro"))
+      : null);
 }
 
 // ---------- Administração ----------
@@ -1827,14 +2237,16 @@ async function aoMudarUsuario(u) {
   estado.filtros.distancias = new Set(pref?.distancias || []);
   estado.filtros.tematica = Boolean(pref?.tematica);
   estado.filtros.noturna = Boolean(pref?.noturna);
+  estado.filtros.preco = PRECOS.some(([v]) => v === pref?.preco) ? pref.preco : null;
+  estado.filtros.quando = PERIODOS.some(([v]) => v === pref?.quando) ? pref.quando : null;
   atualizarTopo();
-  // Voltando do login do Strava: conclui a conexão e abre a aba Treinos, onde fica o painel.
+  // Voltando do login do Strava: conclui a conexão e abre o Meu Painel, onde ficam os dados do Strava.
   try {
-    if (await Strava.concluirRetorno()) estado.aba = "treinos";
+    if (await Strava.concluirRetorno()) estado.aba = "painel";
   } catch (erro) {
     console.error(erro);
     toast(erro.message || "Não foi possível conectar o Strava.");
-    estado.aba = "treinos";
+    estado.aba = "painel";
   }
   irPara(estado.aba || "provas");
 }
@@ -1843,7 +2255,7 @@ async function iniciar() {
   estado.demo = !FIREBASE_CONFIG || new URLSearchParams(location.search).has("demo");
   estado.store = estado.demo ? new StoreDemo() : new StoreFirebase(FIREBASE_CONFIG);
   for (const b of document.querySelectorAll("#abas button")) b.addEventListener("click", () => irPara(b.dataset.aba));
-  $("#btn-perfil").addEventListener("click", () => telaPerfil(false));
+  $("#btn-perfil").addEventListener("click", () => irPara("perfil"));
   try {
     await estado.store.iniciar(aoMudarUsuario);
   } catch (erro) {

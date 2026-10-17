@@ -3,7 +3,7 @@
 Este repositório tem as duas partes do piloto:
 
 - **Coletor** (este README): pesquisa as provas e monta o calendário, no estilo do Prospector. Uso interno.
-- **App do corredor** ([`corredor/`](corredor/README.md)): o que o corredor usa. Calendário por região com temáticas e noturnas, "Vou correr" com os amigos, seguir corredores, treinos (manual ou GPX), grupos com ranking de km, parceiros por região e uma área de administração para publicar o `calendario.json` do coletor e marcar provas em destaque.
+- **App do corredor** ([`corredor/`](corredor/README.md)): o que o corredor usa. Calendário de provas da sua região com lote, valor e link oficial; feed da comunidade com quem vai e quem chegou; Meu Painel privado (treinos, Strava, evolução do ritmo); perfil com medalhas; grupos, parceiros e uma área de administração para publicar o `calendario.json` do coletor e marcar provas em destaque.
 
 
 Ferramenta da **fase 1 do projeto piloto Ritmex** (planilha-piloto): pesquisa corridas de rua de uma cidade (em São Paulo, por zona) e monta o calendário das próximas semanas, com fonte e link oficial de cada prova. Usa a mesma arquitetura do **Prospector** (mesma chave da AIsa, mesmo login Firebase, mesmo jeito de publicar na Vercel) e existe nas mesmas duas formas: **linha de comando** e **app web**.

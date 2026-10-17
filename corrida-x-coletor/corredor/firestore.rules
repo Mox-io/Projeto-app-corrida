@@ -56,7 +56,9 @@ service cloud.firestore {
     match /usuarios/{uid} {
       allow read: if logado();
       allow create, update: if logado() && uid == eu()
-        && soCampos(['nome', 'handle', 'cidade', 'regiao', 'instagram', 'distancias', 'nomeBusca', 'foto', 'atualizadoEm'])
+        && soCampos(['nome', 'handle', 'cidade', 'regiao', 'zonas', 'instagram', 'distancias', 'nomeBusca', 'foto', 'atualizadoEm'])
+        // zonas favoritas de treino (opcional): até 5
+        && (!('zonas' in request.resource.data) || (request.resource.data.zonas is list && request.resource.data.zonas.size() <= 5))
         && texto(request.resource.data.nome, 2, 60)
         && request.resource.data.handle is string && request.resource.data.handle.matches('^[a-z0-9_.]{3,20}$')
         && texto(request.resource.data.cidade, 2, 60)
@@ -94,9 +96,25 @@ service cloud.firestore {
       allow delete: if logado() && (resource.data.seguidor == eu() || resource.data.alvo == eu());
     }
 
-    // Treinos: só o dono cria/apaga. Distância de 0 a 300 km.
-    match /treinos/{id} {
+    // "Concluí esta prova": o id é <provaId>_<uid>. Aparece no feed e no ranking dos grupos (é a chegada
+    // numa prova pública, não um treino). Só o dono cria e apaga.
+    match /conclusoes/{id} {
       allow read: if logado();
+      allow create, update: if logado()
+        && request.resource.data.uid == eu()
+        && id == request.resource.data.provaId + '_' + eu()
+        && soCampos(['provaId', 'provaNome', 'data', 'distanciaKm', 'tempoSeg', 'uid', 'nome', 'em'])
+        && texto(request.resource.data.provaNome, 1, 200)
+        && texto(request.resource.data.nome, 1, 60)
+        && dataISO(request.resource.data.data)
+        && request.resource.data.distanciaKm is number && request.resource.data.distanciaKm > 0 && request.resource.data.distanciaKm <= 250
+        && (request.resource.data.tempoSeg == null || (request.resource.data.tempoSeg is int && request.resource.data.tempoSeg > 60 && request.resource.data.tempoSeg < 86400));
+      allow delete: if logado() && resource.data.uid == eu();
+    }
+
+    // Treinos: PRIVADOS. Só o dono lê, cria e apaga (não entram no feed nem no ranking). Distância de 0 a 300 km.
+    match /treinos/{id} {
+      allow read: if logado() && resource.data.uid == eu();
       allow create: if logado()
         && request.resource.data.uid == eu()
         && soCampos(['uid', 'nome', 'data', 'km', 'minutos', 'descricao', 'origem', 'em'])
