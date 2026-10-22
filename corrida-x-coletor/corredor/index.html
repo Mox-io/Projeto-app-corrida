@@ -316,6 +316,11 @@ const diasAte = (iso, hoje) => Math.round((new Date(`${iso}T12:00:00`) - new Dat
 const km = (n) => `${(Math.round(n * 10) / 10).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
 const iniciais = (nome) => normalizar(nome).split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "?";
 
+// "em" de um post do feed: texto ISO e nunca no futuro (um post com data futura ficaria preso no topo).
+function emSeguro(em) {
+  const agora = new Date().toISOString();
+  return typeof em === "string" && /^\d{4}-\d{2}-\d{2}T/.test(em) ? (em > agora ? agora : em) : "";
+}
 function quandoRelativo(isoDataHora) {
   const seg = (Date.now() - new Date(isoDataHora).getTime()) / 1000;
   if (!isFinite(seg)) return "";
@@ -444,12 +449,20 @@ function lerTempo(texto) {
   if (!(total > 60 && total < 24 * 3600)) throw new Error("Tempo inválido.");
   return total;
 }
+// Ritmo mais rápido aceito: 2:00/km (o recorde mundial da maratona é perto de 2:50/km).
+const RITMO_MINIMO_SEG = 120;
+// Maior distância da prova em km (gravada como kmMax na importação; o firestore.rules limita a conclusão a ela + 1 km).
+const kmMaxProva = (p) => (typeof p?.kmMax === "number" ? p.kmMax : Math.max(0, ...distanciasEmKm(p?.distancias)) || null);
+
 function validarConclusao(prova, km, tempo) {
-  const distanciaKm = Number(String(km).replace(",", "."));
+  const distanciaKm = Math.round(Number(String(km).replace(",", ".")) * 100) / 100;
   if (!(distanciaKm > 0 && distanciaKm <= 250)) throw new Error("Informe a distância que você correu (km).");
   if (!prova?.id || !prova?.data) throw new Error("Prova inválida.");
-  return { provaId: prova.id, provaNome: String(prova.nome || "").slice(0, 200), data: prova.data,
-    distanciaKm: Math.round(distanciaKm * 100) / 100, tempoSeg: lerTempo(tempo) };
+  const kmMax = kmMaxProva(prova);
+  if (kmMax && distanciaKm > kmMax + 1) throw new Error(`A maior distância desta prova é ${String(kmMax).replace(".", ",")} km.`);
+  const tempoSeg = lerTempo(tempo);
+  if (tempoSeg != null && tempoSeg < distanciaKm * RITMO_MINIMO_SEG) throw new Error("Esse tempo dá um ritmo abaixo de 2:00/km. Confira o tempo e a distância.");
+  return { provaId: prova.id, provaNome: String(prova.nome || "").slice(0, 200), data: prova.data, distanciaKm, tempoSeg };
 }
 const tempoTexto = (s) => (s == null ? null : `${s >= 3600 ? `${Math.floor(s / 3600)}:` : ""}${String(Math.floor((s % 3600) / 60)).padStart(s >= 3600 ? 2 : 1, "0")}:${String(s % 60).padStart(2, "0")}`);
 
@@ -460,8 +473,10 @@ function validarTreino(t) {
   if (t.data > hojeISO() && !estado.demo) throw new Error("A data do treino não pode ser no futuro.");
   const minutos = t.minutos === "" || t.minutos == null ? null : Number(t.minutos);
   if (minutos != null && !(Number.isInteger(minutos) && minutos > 0 && minutos <= 2000)) throw new Error("Tempo inválido (minutos inteiros).");
+  const kmArred = Math.round(kmN * 100) / 100;
+  if (minutos != null && minutos * 60 < kmArred * RITMO_MINIMO_SEG) throw new Error("Esse tempo dá um ritmo abaixo de 2:00/km. Confira o tempo e a distância.");
   const descricao = String(t.descricao || "").trim().slice(0, 120);
-  return { km: Math.round(kmN * 100) / 100, data: t.data, minutos, descricao, origem: t.origem === "gpx" ? "gpx" : "manual" };
+  return { km: kmArred, data: t.data, minutos, descricao, origem: t.origem === "gpx" ? "gpx" : "manual" };
 }
 
 function codigoNovo() {
@@ -638,6 +653,7 @@ class StoreDemo {
     const hoje = this.hoje();
     return Object.values(this.d.confirmacoes).filter((c) => c.data >= hoje);
   }
+  async todasConfirmacoes() { return Object.values(this.d.confirmacoes); }
   async confirmar(prova, sim, nome) {
     const id = `${prova.id}_${this.uid}`;
     if (sim) this.d.confirmacoes[id] = { provaId: prova.id, uid: this.uid, nome, data: prova.data, em: new Date().toISOString() };
@@ -657,8 +673,8 @@ class StoreDemo {
   // Feed: provas confirmadas e provas concluídas. Treinos NÃO entram (são privados, só no Meu Painel).
   async feed(uids) {
     const set = new Set(uids);
-    const conf = Object.values(this.d.confirmacoes).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "confirmacao", ...c }));
-    const fim = Object.values(this.d.conclusoes || {}).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "conclusao", ...c }));
+    const conf = Object.values(this.d.confirmacoes).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "confirmacao", ...c, em: emSeguro(c.em) }));
+    const fim = Object.values(this.d.conclusoes || {}).filter((c) => set.has(c.uid)).map((c) => ({ tipo: "conclusao", ...c, em: emSeguro(c.em) }));
     return [...conf, ...fim].sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
   }
   async usuariosDaCidade(cidade) {
@@ -777,6 +793,7 @@ function validarCalendario(json, soConferidas) {
       cidade: cidadeCanonica(texto(p.cidade, 60) || texto(json.cidade, 60) || CIDADE),
       regiao: texto(p.regiao, 40), regioes: (p.regioes || []).filter((r) => REGIOES.includes(r)),
       distancias: (p.distancias || []).filter((d) => typeof d === "string").slice(0, 8).map((d) => d.slice(0, 30)),
+      kmMax: Math.max(0, ...distanciasEmKm((p.distancias || []).filter((d) => typeof d === "string"))) || null,
       organizador: texto(p.organizador, 120), plataforma: texto(p.plataforma, 80), preco: texto(p.preco, 120), porte: texto(p.porte, 120),
       link_inscricao: link, fonte: { nome: texto(p.fonte?.nome, 80) || "", url: fonteUrl, coletado_em: texto(p.fonte?.coletado_em, 10) || "" },
       tags: (p.tags || []).filter((t) => t === "tematica" || t === "noturna"), conferido: Boolean(p.conferido),
@@ -873,6 +890,8 @@ class StoreFirebase {
     const { query, where } = this.F;
     return this.lista(query(this.col("confirmacoes"), where("data", ">=", this.hoje())));
   }
+  // Administração: inclui as provas que já passaram (o número para mostrar aos organizadores).
+  async todasConfirmacoes() { return this.lista(this.col("confirmacoes")); }
   async confirmar(prova, sim, nome) {
     const r = this.ref("confirmacoes", `${prova.id}_${this.uid}`);
     if (sim) await this.F.setDoc(r, { provaId: prova.id, uid: this.uid, nome, data: prova.data, em: new Date().toISOString() });
@@ -900,7 +919,7 @@ class StoreFirebase {
       this.emPartes("confirmacoes", "uid", uids, [orderBy("em", "desc"), limit(40)]),
       this.emPartes("conclusoes", "uid", uids, [orderBy("em", "desc"), limit(40)]),
     ]);
-    return [...conf.map((c) => ({ tipo: "confirmacao", ...c })), ...fim.map((c) => ({ tipo: "conclusao", ...c }))]
+    return [...conf.map((c) => ({ tipo: "confirmacao", ...c, em: emSeguro(c.em) })), ...fim.map((c) => ({ tipo: "conclusao", ...c, em: emSeguro(c.em) }))]
       .sort((a, b) => b.em.localeCompare(a.em)).slice(0, 40);
   }
   async usuariosDaCidade(cidade) {
@@ -948,16 +967,23 @@ class StoreFirebase {
   async criarGrupo(nome) {
     const n = String(nome || "").trim();
     if (n.length < 3 || n.length > 40) throw new Error("O nome do grupo deve ter de 3 a 40 caracteres.");
-    const g = { nome: n, codigo: codigoNovo(), dono: this.uid, membros: [this.uid], criadoEm: new Date().toISOString() };
-    const r = await this.F.addDoc(this.col("grupos"), g);
-    return { id: r.id, ...g };
+    // O id do documento é o código do convite (firestore.rules): só entra quem sabe o código.
+    for (let tentativa = 0; tentativa < 5; tentativa++) {
+      const g = { nome: n, codigo: codigoNovo(), dono: this.uid, membros: [this.uid], criadoEm: new Date().toISOString() };
+      const r = this.ref("grupos", g.codigo);
+      if ((await this.F.getDoc(r)).exists()) continue; // código já usado: sorteia outro
+      await this.F.setDoc(r, g);
+      return { id: g.codigo, ...g };
+    }
+    throw new Error("Não deu para gerar o código do grupo. Tente de novo.");
   }
   async entrarGrupo(codigo) {
-    const { query, where, limit, updateDoc, arrayUnion } = this.F;
+    const { updateDoc, arrayUnion } = this.F;
     const c = String(codigo || "").trim().toUpperCase();
     if (!/^[A-Z0-9]{6}$/.test(c)) throw new Error("O código tem 6 letras ou números.");
-    const [g] = await this.lista(query(this.col("grupos"), where("codigo", "==", c), limit(1)));
-    if (!g) throw new Error("Nenhum grupo com esse código.");
+    const s = await this.F.getDoc(this.ref("grupos", c));
+    if (!s.exists()) throw new Error("Nenhum grupo com esse código.");
+    const g = { ...s.data(), id: s.id };
     if (g.membros.includes(this.uid)) throw new Error("Você já está nesse grupo.");
     if (g.membros.length >= LIMITE_IN) throw new Error(`O grupo já tem ${LIMITE_IN} pessoas (limite do piloto).`);
     await updateDoc(this.ref("grupos", g.id), { membros: arrayUnion(this.uid) });
@@ -2111,7 +2137,7 @@ async function secaoParceiros() {
 async function telaAdmin() {
   if (!estado.admin) return irPara("provas");
   marcarAba(null);
-  const [provas, confirmacoes, parceiros] = await Promise.all([estado.store.todasProvas(), estado.store.confirmacoes(), estado.store.parceiros()]);
+  const [provas, confirmacoes, parceiros] = await Promise.all([estado.store.todasProvas(), estado.store.todasConfirmacoes(), estado.store.parceiros()]);
   const contagem = {};
   for (const c of confirmacoes) contagem[c.provaId] = (contagem[c.provaId] || 0) + 1;
 

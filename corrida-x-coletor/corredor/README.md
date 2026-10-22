@@ -49,6 +49,9 @@ e abra http://localhost:8080. Para ver a Administração na demo, toque no seu a
 ## Segurança e privacidade
 
 - As permissões ficam no `firestore.rules`, não na página: cada pessoa só altera o próprio perfil, as próprias confirmações, os próprios treinos e quem ela segue. Só admins publicam provas e parceiros. Nos grupos, cada um só pode entrar ou sair a si mesmo.
+- Provas concluídas (feed, ranking e medalhas): as regras só aceitam prova que existe, já aconteceu e foi confirmada pela pessoa, com o nome e a data da própria prova, distância até a maior da prova (`kmMax`, gravado ao publicar o `calendario.json`; +1 km de folga) e ritmo até 2:00/km. Treinos também têm o limite de 2:00/km. Provas publicadas antes do `kmMax` aceitam até 250 km: publique o calendário de novo para gravá-lo.
+- Grupos: o id do documento é o código do convite, e a busca só devolve os grupos em que a pessoa já está. Só entra quem sabe o código. Grupos criados antes dessa regra têm id aleatório: os membros continuam, mas ninguém novo entra (crie o grupo de novo para ter um código que funcione).
+- A lista de e-mails dos admins (`config/admins`) só é lida por admins.
 - Tudo o que vem do banco entra na página como texto (nunca como HTML), e só links `http(s)` viram links.
 - **Visibilidade:** perfis, provas confirmadas e treinos ficam visíveis para qualquer corredor logado. A tela de login avisa isso. Antes de abrir para o público geral, vale um texto de privacidade (LGPD) e, se quiserem, uma opção de perfil privado.
 - Limite do piloto: até 30 pessoas por grupo, e o feed e o ranking leem no máximo 30 pessoas por consulta (limite do filtro "in" do Firestore). Para crescer além disso, o caminho é somar os km numa Cloud Function.
