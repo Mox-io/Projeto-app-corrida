@@ -11,3 +11,6 @@ output/
 
 # Cache do deploy do Firebase
 .firebase/
+
+# Dependências dos testes das regras (corredor/tests)
+node_modules/

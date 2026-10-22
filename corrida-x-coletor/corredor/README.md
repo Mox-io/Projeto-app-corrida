@@ -56,6 +56,22 @@ e abra http://localhost:8080. Para ver a Administração na demo, toque no seu a
 - **Visibilidade:** perfis, provas confirmadas e treinos ficam visíveis para qualquer corredor logado. A tela de login avisa isso. Antes de abrir para o público geral, vale um texto de privacidade (LGPD) e, se quiserem, uma opção de perfil privado.
 - Limite do piloto: até 30 pessoas por grupo, e o feed e o ranking leem no máximo 30 pessoas por consulta (limite do filtro "in" do Firestore). Para crescer além disso, o caminho é somar os km numa Cloud Function.
 
+## Testar as regras
+
+Os testes em [`tests/`](tests/) rodam o `firestore.rules` no emulador do Firestore, sem tocar no projeto de verdade: provas concluídas (prova real, já ocorrida e confirmada, nome, data, distância e ritmo), treinos, campo `em`, grupos por código e a lista de admins. Rode-os sempre que mudar as regras, antes do `firebase deploy --only firestore`.
+
+Precisa do Node 20+, do `firebase-tools` e do **Java 21** (o emulador não roda no Java 8). Sem instalar o Java no sistema, dá para baixar o JDK 21 em .zip ([Adoptium](https://adoptium.net/temurin/releases/?version=21)), descompactar numa pasta e apontar para ela só no terminal:
+
+```powershell
+cd C:\projetos\app-corrida\corrida-x-coletor\corredor\tests
+npm install
+$env:JAVA_HOME = "C:\caminho\do\jdk-21"     # pasta descompactada
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+npm test
+```
+
+O emulador usa a porta 8181 (a 8080 fica livre para servir o app) e o projeto fictício `demo-ritmex`.
+
 ## O que foi testado
 
 O modo demonstração foi testado de ponta a ponta no navegador (celular e computador): login, perfil, filtros, "Vou correr", seguir, feed, treino manual e por GPX, grupo com ranking, parceiros e administração (importar o `calendario.json`, destacar). **A versão com Firebase ainda não rodou de verdade**: não consegui acessar o Firebase daqui. Na primeira vez, teste com a sua conta. Se aparecer um erro de índice, o próprio console do navegador mostra o link para criá-lo (ou rode o `firebase deploy --only firestore`, que cria todos).
