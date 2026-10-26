@@ -5,6 +5,9 @@
   },
   "hosting": {
     "public": ".",
+    "redirects": [
+      { "regex": "^/(.*)$", "destination": "https://projeto-app-corrida-five.vercel.app/:1", "type": 301 }
+    ],
     "ignore": ["firebase.json", "firestore.rules", "firestore.indexes.json", "README.md", "vercel.json", "tests/**", "**/.*"],
     "headers": [
       {

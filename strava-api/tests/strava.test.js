@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { rota, trocarCodigo, renovar } from "../lib/strava.js";
 
 const ENV = { STRAVA_CLIENT_ID: "288160", STRAVA_CLIENT_SECRET: "segredo-de-teste" };
-const CFG = { clientId: "288160", clientSecret: "segredo-de-teste", origens: ["https://corrida-x.web.app"] };
+const CFG = { clientId: "288160", clientSecret: "segredo-de-teste", origens: ["https://projeto-app-corrida-five.vercel.app"] };
 
 function stravaFalso(status, corpo) {
   const chamadas = [];
@@ -16,7 +16,7 @@ function stravaFalso(status, corpo) {
   return { fetchFn, chamadas };
 }
 
-function chamar(handler, { method = "POST", origin = "https://corrida-x.web.app", body } = {}) {
+function chamar(handler, { method = "POST", origin = "https://projeto-app-corrida-five.vercel.app", body } = {}) {
   const res = {
     headers: {}, statusCode: 0, corpo: undefined,
     setHeader(k, v) { this.headers[k] = v; },
@@ -61,7 +61,7 @@ test("rota: CORS só para o Ritmex, só POST", async () => {
 
   const ok = await chamar(handler, { body: { refresh_token: "renova123456" } });
   assert.equal(ok.statusCode, 200);
-  assert.equal(ok.headers["Access-Control-Allow-Origin"], "https://corrida-x.web.app");
+  assert.equal(ok.headers["Access-Control-Allow-Origin"], "https://projeto-app-corrida-five.vercel.app");
 
   const outraOrigem = await chamar(handler, { origin: "https://site-estranho.example", body: { refresh_token: "renova123456" } });
   assert.equal(outraOrigem.statusCode, 403);

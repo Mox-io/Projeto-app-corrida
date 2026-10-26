@@ -17,11 +17,11 @@ O servidor **não guarda nada**. A página do Ritmex lê as atividades direto do
 3. **Environment Variables**:
    - `STRAVA_CLIENT_SECRET` = o *Client Secret* do app no Strava (marque como **Sensitive**)
    - `STRAVA_CLIENT_ID` = `288160` (opcional; já é o padrão)
-   - `ORIGENS_PERMITIDAS` = `https://corrida-x.web.app,http://localhost:8080` (opcional; já é o padrão)
+   - `ORIGENS_PERMITIDAS` = `https://projeto-app-corrida-five.vercel.app,http://localhost:8080` (opcional; já é o padrão)
 4. **Deploy**. O endereço fica algo como `https://ritmex-strava.vercel.app`.
-5. Coloque esse endereço em `STRAVA_API` no topo do `corredor/index.html` e publique o site (`firebase deploy --only hosting`).
+5. Coloque esse endereço em `STRAVA_API` no topo do `corredor/index.html` e faça o push (a Vercel publica o app sozinha).
 
-No Strava (*strava.com/settings/api*), o **Domínio de callback** deve ser `corrida-x.web.app` (`localhost` é sempre aceito para testes).
+No Strava (*strava.com/settings/api*), o **Domínio de callback** deve ser `projeto-app-corrida-five.vercel.app`, o endereço oficial do app (`localhost` é sempre aceito para testes).
 
 ## Testes
 

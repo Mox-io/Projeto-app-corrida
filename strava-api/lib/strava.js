@@ -14,7 +14,7 @@ export function configuracao(env = process.env) {
   return {
     clientId: (env.STRAVA_CLIENT_ID || "288160").trim(),
     clientSecret: (env.STRAVA_CLIENT_SECRET || "").trim(),
-    origens: (env.ORIGENS_PERMITIDAS || "https://corrida-x.web.app,http://localhost:8080")
+    origens: (env.ORIGENS_PERMITIDAS || "https://projeto-app-corrida-five.vercel.app,http://localhost:8080")
       .split(",").map((o) => o.trim()).filter(Boolean),
   };
 }
