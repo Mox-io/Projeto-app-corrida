@@ -43,8 +43,20 @@ e abra http://localhost:8080. Para ver a Administração na demo, toque no seu a
    firebase deploy --only firestore
    ```
 6. No Firestore, crie à mão o documento **`config/admins`** com o campo `emails` (array) contendo o seu e-mail Google e o do Diego. É ele que libera a tela de Administração; ninguém consegue mudá-lo pelo app.
-7. Publique o site: `firebase deploy --only hosting` (o endereço fica `seu-projeto.web.app`). Também dá para usar a Vercel, criando um projeto com a pasta raiz `corredor`. Se usar outro endereço, acrescente-o em **Authentication > Configurações > Domínios autorizados**.
+7. Publique o site: `firebase deploy --only hosting` (o endereço fica `seu-projeto.web.app`). Também dá para usar a Vercel (veja "Publicar na Vercel" abaixo). Se usar outro endereço, acrescente-o em **Authentication > Configurações > Domínios autorizados**.
 8. Entre com a sua conta, vá em Perfil > Administração e envie o `calendario.json` gerado pelo coletor.
+
+## Publicar na Vercel
+
+O app é uma página estática: a Vercel só serve os arquivos (o `vercel.json` põe os mesmos cabeçalhos de segurança do Firebase Hosting e o `.vercelignore` deixa de fora testes, regras e README). O banco e o login continuam no Firebase, e as regras continuam sendo publicadas com `firebase deploy --only firestore`.
+
+1. Na Vercel: **Add New › Project** › importe o repositório `Projeto-app-corrida`.
+2. **Root Directory**: `corrida-x-coletor/corredor`. Framework: *Other*. Sem comando de build e sem variáveis de ambiente.
+3. **Deploy**. O endereço fica algo como `https://ritmex.vercel.app`. A cada push na `main`, a Vercel publica de novo.
+4. No Firebase: **Authentication › Configurações › Domínios autorizados** › adicione o endereço da Vercel (sem `https://`). Sem isso, o login com Google não abre.
+5. Strava (se estiver usando): acrescente o endereço em `ORIGENS_PERMITIDAS` no projeto `strava-api` da Vercel e troque o **Domínio de callback** do app no Strava (*strava.com/settings/api*) para o domínio da Vercel. O Strava aceita um domínio só.
+
+O login abre numa janela (popup) e usa o `authDomain` `corrida-x.firebaseapp.com`, que funciona em qualquer domínio autorizado. Se o navegador bloquear o popup, o app tenta o login por redirecionamento, que em alguns navegadores (Safari, modo anônimo) não volta logado fora do domínio do Firebase. Nesse caso, permita popups para o site.
 
 ## Segurança e privacidade
 

@@ -1,0 +1,8 @@
+# Só a página vai para o ar (o mesmo que o "ignore" do firebase.json)
+tests
+README.md
+firebase.json
+firestore.rules
+firestore.indexes.json
+.firebase
+.firebaserc
