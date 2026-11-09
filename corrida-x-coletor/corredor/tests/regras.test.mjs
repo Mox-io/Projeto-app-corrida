@@ -68,3 +68,21 @@ test("entrar no grupo com o código passa", () => assertSucceeds(updateDoc(doc(d
 test("pôr outra pessoa no grupo falha", () => assertFails(updateDoc(doc(db("erin"), "grupos/ABC123"), { membros: arrayUnion("frank") })));
 // Controle do teste "sem confirmação falha": depois de confirmar (teste acima), Bob consegue concluir.
 test("depois de confirmar, Bob conclui", () => assertSucceeds(concluir("bob", "p1", { nome: "Bob" })));
+
+// Cartão da prova: dados de emergência e tipo sanguíneo (dado sensível): só a própria pessoa lê e escreve.
+const cartao = (extra) => ({ nome: "Alice Silva", contatoNome: "Bia", contatoTelefone: "(11) 98765-4321", tipoSanguineo: "O+", saude: "", atualizadoEm: agora(), ...extra });
+test("salvar o próprio cartão passa", () => assertSucceeds(setDoc(doc(db("alice"), "cartoes/alice"), cartao())));
+test("ler o próprio cartão passa", () => assertSucceeds(getDoc(doc(db("alice"), "cartoes/alice"))));
+test("outro corredor lê o cartão falha", () => assertFails(getDoc(doc(db("bob"), "cartoes/alice"))));
+test("admin lê o cartão de outra pessoa falha", () => assertFails(getDoc(doc(db("adm", { email: "admin@x.com", email_verified: true }), "cartoes/alice"))));
+test("listar cartões falha", () => assertFails(getDocs(collection(db("alice"), "cartoes"))));
+test("escrever o cartão de outra pessoa falha", () => assertFails(setDoc(doc(db("bob"), "cartoes/alice"), cartao())));
+test("tipo sanguíneo inventado falha", () => assertFails(setDoc(doc(db("alice"), "cartoes/alice"), cartao({ tipoSanguineo: "Z+" }))));
+test("tipo sanguíneo em branco passa", () => assertSucceeds(setDoc(doc(db("alice"), "cartoes/alice"), cartao({ tipoSanguineo: "" }))));
+test("telefone com letras falha", () => assertFails(setDoc(doc(db("alice"), "cartoes/alice"), cartao({ contatoTelefone: "ligue pra mim" }))));
+test("campo extra no cartão falha", () => assertFails(setDoc(doc(db("alice"), "cartoes/alice"), cartao({ cpf: "123" }))));
+const numero = (extra) => ({ numero: "4521", curral: "B", atualizadoEm: agora(), ...extra });
+test("salvar número e curral da prova passa", () => assertSucceeds(setDoc(doc(db("alice"), "cartoes/alice/provas/p1"), numero())));
+test("ler os próprios números passa", () => assertSucceeds(getDocs(collection(db("alice"), "cartoes/alice/provas"))));
+test("outro corredor lê os números falha", () => assertFails(getDocs(collection(db("bob"), "cartoes/alice/provas"))));
+test("número de peito longo demais falha", () => assertFails(setDoc(doc(db("alice"), "cartoes/alice/provas/p1"), numero({ numero: "1234567890123" }))));

@@ -60,6 +60,31 @@ service cloud.firestore {
         && textoOpcional(request.resource.data.escopo, 200);
     }
 
+    // Cartão da prova: PRIVADO. Dados de emergência e tipo sanguíneo são dados de saúde (dado sensível na
+    // LGPD): só a própria pessoa lê e escreve; ninguém mais, nem admin. Número de peito e curral de cada
+    // prova ficam em cartoes/{uid}/provas/{provaId}.
+    function telefone(v) { return v == '' || (v is string && v.matches('^[0-9+() .-]{8,20}$')); }
+    match /cartoes/{uid} {
+      allow read, delete: if logado() && uid == eu();
+      allow create, update: if logado() && uid == eu()
+        && soCampos(['nome', 'contatoNome', 'contatoTelefone', 'tipoSanguineo', 'saude', 'atualizadoEm'])
+        && textoOpcional(request.resource.data.nome, 80)
+        && textoOpcional(request.resource.data.contatoNome, 60)
+        && telefone(request.resource.data.contatoTelefone)
+        && request.resource.data.tipoSanguineo in ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+        && textoOpcional(request.resource.data.saude, 200)
+        && momento(request.resource.data.atualizadoEm);
+
+      match /provas/{provaId} {
+        allow read, delete: if logado() && uid == eu();
+        allow create, update: if logado() && uid == eu()
+          && soCampos(['numero', 'curral', 'atualizadoEm'])
+          && textoOpcional(request.resource.data.numero, 12)
+          && textoOpcional(request.resource.data.curral, 30)
+          && momento(request.resource.data.atualizadoEm);
+      }
+    }
+
     // Perfil: cada um escreve só o seu. Logados podem ler (é o que faz a parte social funcionar).
     match /usuarios/{uid} {
       allow read: if logado();

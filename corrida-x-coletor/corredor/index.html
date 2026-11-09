@@ -190,6 +190,26 @@ table.ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
 .login ul { text-align: left; font-size: 14px; color: var(--muted); padding-left: 20px; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + 16px); transform: translateX(-50%); background: #f2f4fa; color: #0b132b;
          padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); text-align: center; }
+/* Cartão da prova: claro e com letras grandes, para ler no sol e mostrar a um socorrista */
+.cartao-fundo { position: fixed; inset: 0; background: rgba(4, 8, 20, .85); z-index: 30; display: flex; align-items: center; justify-content: center;
+                padding: 16px; overflow-y: auto; }
+.cartao { background: #ffffff; color: #0b132b; border-radius: 18px; width: 100%; max-width: 420px; padding: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.4); margin: auto; }
+.cartao .cartao-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.cartao .prova { font-weight: 800; font-size: 16px; margin: 0; }
+.cartao .quando { color: #4a5578; font-size: 13px; margin: 2px 0 0; }
+.cartao .fechar { border: 0; background: #eef1f8; color: #0b132b; border-radius: 999px; min-width: 44px; min-height: 44px; font-size: 20px; cursor: pointer; }
+.cartao .nome { font-size: 22px; font-weight: 800; margin: 14px 0 4px; overflow-wrap: anywhere; }
+.cartao .grade-cartao { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.cartao .bloco { background: #f3f5fa; border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.cartao .bloco span { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #4a5578; }
+.cartao .bloco b { display: block; font-size: 26px; font-weight: 900; overflow-wrap: anywhere; }
+.cartao .bloco--numero b { font-size: 40px; color: #c94400; }
+.cartao .emergencia { background: #fff1f0; border: 2px solid #d93025; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+.cartao .emergencia h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: #b3261e; }
+.cartao .emergencia p { margin: 4px 0; font-size: 16px; overflow-wrap: anywhere; }
+.cartao .emergencia a { color: #b3261e; font-weight: 800; font-size: 20px; }
+.cartao .sangue { font-size: 34px; font-weight: 900; color: #b3261e; }
+.cartao .rodape { color: #4a5578; font-size: 12px; margin: 12px 0 0; }
 .voltar { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 6px 0; font-size: 14px; }
 details.mais summary { cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 600; }
 
@@ -436,6 +456,18 @@ function validarPerfil(p) {
   const favoritas = zonas ? [...new Set((p.zonas || []).filter((z) => REGIOES.includes(z)))].slice(0, 5) : [];
   return { nome, handle, cidade, regiao: zonas ? p.regiao : "", zonas: favoritas, instagram, distancias, nomeBusca: normalizar(nome), foto: p.foto || null };
 }
+
+// Cartão da prova (privado). Espelha cartoes/{uid} e cartoes/{uid}/provas/{provaId} no firestore.rules.
+const TIPOS_SANGUINEOS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const textoLimpo = (v, max) => String(v || "").trim().replace(/\s+/g, " ").slice(0, max);
+function validarCartao(c) {
+  const contatoTelefone = String(c.contatoTelefone || "").trim();
+  if (contatoTelefone && !/^[0-9+() .-]{8,20}$/.test(contatoTelefone)) throw new Error("Telefone do contato inválido (ex.: (11) 98765-4321).");
+  if (c.tipoSanguineo && !TIPOS_SANGUINEOS.includes(c.tipoSanguineo)) throw new Error("Tipo sanguíneo inválido.");
+  return { nome: textoLimpo(c.nome, 80), contatoNome: textoLimpo(c.contatoNome, 60), contatoTelefone,
+    tipoSanguineo: c.tipoSanguineo || "", saude: textoLimpo(c.saude, 200) };
+}
+const validarNumeroProva = (v) => ({ numero: textoLimpo(v.numero, 12), curral: textoLimpo(v.curral, 30) });
 
 // "Concluí esta prova": distância corrida (km) e tempo opcional ("52:10" ou "1:05:30").
 function lerTempo(texto) {
@@ -714,6 +746,18 @@ class StoreDemo {
     if (this.d.treinos[id]?.uid === this.uid) delete this.d.treinos[id];
     this.salvar();
   }
+  // --- cartão da prova (privado) ---
+  async cartaoLer() { return this.d.cartao || null; }
+  async cartaoSalvar(c) { this.d.cartao = { ...validarCartao(c), atualizadoEm: new Date().toISOString() }; this.salvar(); }
+  async numerosProvas() { return { ...(this.d.numerosProvas || {}) }; }
+  async numeroProvaSalvar(provaId, v) {
+    const n = validarNumeroProva(v);
+    this.d.numerosProvas = this.d.numerosProvas || {};
+    if (!n.numero && !n.curral) delete this.d.numerosProvas[provaId];
+    else this.d.numerosProvas[provaId] = { ...n, atualizadoEm: new Date().toISOString() };
+    this.salvar();
+  }
+
   // --- grupos ---
   async meusGrupos() {
     return Object.entries(this.d.grupos).filter(([, g]) => g.membros.includes(this.uid)).map(([id, g]) => ({ id, ...g }));
@@ -1030,6 +1074,24 @@ class StoreFirebase {
   async stravaSalvar(dados) { await this.F.setDoc(this.ref("strava", this.uid), dados); }
   async stravaApagar() { await this.F.deleteDoc(this.ref("strava", this.uid)); }
 
+  // Cartão da prova: cartoes/{uid} (emergência e tipo sanguíneo) e cartoes/{uid}/provas/{provaId} (número e curral).
+  // Dados de saúde: só a própria pessoa lê e escreve (firestore.rules).
+  async cartaoLer() {
+    const s = await this.F.getDoc(this.ref("cartoes", this.uid));
+    return s.exists() ? s.data() : null;
+  }
+  async cartaoSalvar(c) { await this.F.setDoc(this.ref("cartoes", this.uid), { ...validarCartao(c), atualizadoEm: new Date().toISOString() }); }
+  async numerosProvas() {
+    const s = await this.F.getDocs(this.F.collection(this.db, "cartoes", this.uid, "provas"));
+    return Object.fromEntries(s.docs.map((d) => [d.id, d.data()]));
+  }
+  async numeroProvaSalvar(provaId, v) {
+    const n = validarNumeroProva(v);
+    const r = this.F.doc(this.db, "cartoes", this.uid, "provas", provaId);
+    if (!n.numero && !n.curral) await this.F.deleteDoc(r);
+    else await this.F.setDoc(r, { ...n, atualizadoEm: new Date().toISOString() });
+  }
+
   // LGPD: apaga tudo o que é da pessoa e, por último, o login. Grupos que ela criou são apagados;
   // nos outros, ela só sai. As regras do Firestore permitem cada uma dessas exclusões.
   async excluirConta() {
@@ -1040,6 +1102,10 @@ class StoreFirebase {
     const consultas = [["confirmacoes", "uid"], ["conclusoes", "uid"], ["treinos", "uid"], ["follows", "seguidor"], ["follows", "alvo"]];
     const docs = (await Promise.all(consultas.map(([c, campo]) => this.F.getDocs(query(this.col(c), where(campo, "==", uid))))))
       .flatMap((s) => s.docs);
+    // cartão da prova: o número e o curral de cada prova e os dados de emergência
+    docs.push(...(await this.F.getDocs(this.F.collection(this.db, "cartoes", uid, "provas"))).docs);
+    const cartao = await this.F.getDoc(this.ref("cartoes", uid));
+    if (cartao.exists()) docs.push(cartao);
     for (let i = 0; i < docs.length; i += 400) {
       const lote = writeBatch(this.db);
       for (const d of docs.slice(i, i + 400)) lote.delete(d.ref);
@@ -1259,7 +1325,7 @@ async function telaPerfilAba() {
     el("button", { type: "button", class: "btn btn--perigo btn--cheio", onclick: (e) => executar(e.currentTarget, () => estado.store.sair()) }, "Sair"),
     el("details", { class: "mais", style: "margin-top:14px" },
       el("summary", {}, "Privacidade e exclusão da conta"),
-      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas e concluídas, treinos, quem você segue e quem segue você, a conexão com o Strava, ",
+      el("p", { class: "dica" }, "Excluir a conta apaga seu perfil, provas confirmadas e concluídas, treinos, o cartão da prova (dados de emergência), quem você segue e quem segue você, a conexão com o Strava, ",
         "e tira você dos grupos (os que você criou são apagados). Não dá para desfazer. ",
         el("a", { href: "privacidade.html" }, "Política de privacidade")),
       el("button", {
@@ -1913,6 +1979,7 @@ async function telaPainel() {
       el("div", { class: "numero" }, el("b", {}, String(doAno.length)), el("span", {}, `provas concluídas em ${ano}`)),
       el("div", { class: "numero" }, el("b", {}, melhorRitmo ? `${ritmoCurto(melhorRitmo)} /km` : "—"), el("span", {}, "melhor ritmo em prova"))),
     termometro,
+    await secaoCartaoProva(confirmadas),
     painelStrava(),
     el("section", { class: "painel" },
       el("h2", {}, "Evolução do ritmo"),
@@ -1923,6 +1990,114 @@ async function telaPainel() {
     await secaoMinhasProvas(confirmadas, conclusoes),
     secaoLancarTreino(),
     el("section", { class: "painel" }, el("h2", {}, "Histórico de treinos"), historicoTreinos(lista)));
+}
+
+// ---------- Cartão da prova (privado): número de peito, curral e dados de emergência ----------
+async function secaoCartaoProva(confirmadas) {
+  const hoje = estado.store.hoje();
+  const [cartao, numeros] = await Promise.all([
+    estado.store.cartaoLer().catch(() => null), estado.store.numerosProvas().catch(() => ({})),
+  ]);
+  const proximas = estado.provas.filter((p) => p.data >= hoje && confirmadas.some((c) => c.provaId === p.id))
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  const itens = proximas.map((p) => {
+    const n = numeros[p.id] || {};
+    const numero = el("input", { type: "text", inputmode: "numeric", maxlength: "12", placeholder: "Nº de peito", value: n.numero || "", "aria-label": `Número de peito em ${p.nome}` });
+    const curral = el("input", { type: "text", maxlength: "30", placeholder: "Curral (ex.: B)", value: n.curral || "", "aria-label": `Curral de largada em ${p.nome}` });
+    const salvar = el("button", { type: "button", class: "btn btn--sm btn--sec" }, "Salvar");
+    salvar.addEventListener("click", () => executar(salvar, async () => {
+      const v = { numero: numero.value, curral: curral.value };
+      await estado.store.numeroProvaSalvar(p.id, v);
+      numeros[p.id] = validarNumeroProva(v);
+      toast("Salvo. Só você vê.");
+    }));
+    const ver = el("button", { type: "button", class: "btn btn--sm" }, "Ver cartão");
+    ver.addEventListener("click", () => abrirCartao(p, validarNumeroProva({ numero: numero.value, curral: curral.value }), cartao));
+    return el("div", { class: "pessoa", style: "flex-wrap:wrap" },
+      el("div", { class: "info", style: "flex-basis:100%" }, el("b", {}, p.nome), el("span", {}, [dataBR(p.data), p.horario, p.local].filter(Boolean).join(" · "))),
+      el("div", { class: "linha", style: "flex:1 1 100%" }, numero, curral),
+      el("div", { class: "linha", style: "flex:1 1 100%;justify-content:flex-end" }, salvar, ver));
+  });
+
+  // Dados de emergência: valem para todas as provas.
+  const c = cartao || {};
+  const erro = el("p", { class: "erro", role: "alert", hidden: true });
+  const campos = {
+    nome: el("input", { id: "ct-nome", type: "text", maxlength: "80", value: c.nome || estado.perfil?.nome || "", autocomplete: "name" }),
+    contatoNome: el("input", { id: "ct-contato", type: "text", maxlength: "60", value: c.contatoNome || "", placeholder: "ex.: Ana (esposa)" }),
+    contatoTelefone: el("input", { id: "ct-tel", type: "tel", maxlength: "20", value: c.contatoTelefone || "", placeholder: "(11) 98765-4321", autocomplete: "off" }),
+    tipoSanguineo: el("select", { id: "ct-sangue" }, el("option", { value: "" }, "Não sei / prefiro não informar"),
+      TIPOS_SANGUINEOS.map((t) => el("option", { value: t, selected: c.tipoSanguineo === t }, t))),
+    saude: el("input", { id: "ct-saude", type: "text", maxlength: "200", value: c.saude || "", placeholder: "ex.: alergia a dipirona, asma" }),
+  };
+  const salvar = el("button", { type: "submit", class: "btn btn--cheio" }, "Salvar dados de emergência");
+  const form = el("form", { novalidate: true },
+    el("div", { class: "campo" }, el("label", { for: "ct-nome" }, "Nome no cartão"), campos.nome),
+    el("div", { class: "grade grade--2" },
+      el("div", { class: "campo" }, el("label", { for: "ct-contato" }, "Contato de emergência"), campos.contatoNome),
+      el("div", { class: "campo" }, el("label", { for: "ct-tel" }, "Telefone do contato"), campos.contatoTelefone)),
+    el("div", { class: "grade grade--2" },
+      el("div", { class: "campo" }, el("label", { for: "ct-sangue" }, "Tipo sanguíneo"), campos.tipoSanguineo),
+      el("div", { class: "campo" }, el("label", { for: "ct-saude" }, "Alergias ou condições (opcional)"), campos.saude)),
+    erro, salvar);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    erro.hidden = true;
+    executar(salvar, async () => {
+      const dados = Object.fromEntries(Object.entries(campos).map(([k, v]) => [k, v.value]));
+      try {
+        await estado.store.cartaoSalvar(dados);
+      } catch (er) {
+        erro.textContent = er.message;
+        erro.hidden = false;
+        return;
+      }
+      toast("Dados de emergência salvos. Só você vê.");
+      irPara("painel");
+    });
+  });
+  const semEmergencia = !c.contatoTelefone && !c.tipoSanguineo;
+
+  return el("section", { class: "painel" },
+    el("h2", {}, "Cartão da prova"),
+    el("p", { class: "dica", style: "margin-top:0" }, "🔒 Só você vê. Na largada o sinal costuma falhar: abra o cartão e tire um print antes de sair de casa."),
+    itens.length ? itens : el("p", { class: "dica" }, "Confirme uma prova na aba Provas (\"Vou correr\") para montar o cartão dela."),
+    el("details", { class: "mais", style: "margin-top:12px", open: semEmergencia },
+      el("summary", {}, semEmergencia ? "Preencha seus dados de emergência" : "Dados de emergência (valem para todas as provas)"),
+      el("p", { class: "dica" }, "Tipo sanguíneo e alergias são dados de saúde: ficam guardados só para você e não aparecem no perfil, no feed nem para os administradores."),
+      form));
+}
+
+function abrirCartao(prova, numero, cartao) {
+  const c = cartao || {};
+  const anterior = document.activeElement;
+  const fechar = el("button", { type: "button", class: "fechar", "aria-label": "Fechar cartão" }, "×");
+  const telefoneLink = c.contatoTelefone ? el("a", { href: `tel:${c.contatoTelefone.replace(/[^0-9+]/g, "")}` }, c.contatoTelefone) : null;
+  const caixa = el("div", { class: "cartao", role: "dialog", "aria-modal": "true", "aria-label": `Cartão da prova ${prova.nome}` },
+    el("div", { class: "cartao-topo" },
+      el("div", {}, el("p", { class: "prova" }, prova.nome),
+        el("p", { class: "quando" }, [dataLonga(prova.data), prova.horario, prova.local].filter(Boolean).join(" · "))),
+      fechar),
+    el("p", { class: "nome" }, c.nome || estado.perfil?.nome || ""),
+    el("div", { class: "grade-cartao" },
+      el("div", { class: "bloco bloco--numero" }, el("span", {}, "Nº de peito"), el("b", {}, numero.numero || "—")),
+      el("div", { class: "bloco" }, el("span", {}, "Curral"), el("b", {}, numero.curral || "—"))),
+    el("div", { class: "emergencia" },
+      el("h3", {}, "Em caso de emergência"),
+      c.contatoNome || telefoneLink ? el("p", {}, c.contatoNome ? `${c.contatoNome}: ` : "", telefoneLink) : el("p", {}, "Contato não informado"),
+      el("p", {}, "Tipo sanguíneo: ", el("span", { class: "sangue" }, c.tipoSanguineo || "—")),
+      c.saude ? el("p", {}, el("b", {}, "Saúde: "), c.saude) : null),
+    !c.contatoTelefone && !c.tipoSanguineo ? el("p", { class: "rodape" }, "Preencha os dados de emergência no Meu Painel.") : null,
+    el("p", { class: "rodape" }, "Ritmex · cartão pessoal do corredor"));
+  const fundo = el("div", { class: "cartao-fundo" }, caixa);
+  const sair = () => { fundo.remove(); document.removeEventListener("keydown", tecla); anterior?.focus?.(); };
+  const tecla = (e) => { if (e.key === "Escape") sair(); };
+  fechar.addEventListener("click", sair);
+  fundo.addEventListener("click", (e) => { if (e.target === fundo) sair(); });
+  document.addEventListener("keydown", tecla);
+  document.body.append(fundo);
+  fechar.focus();
 }
 
 // Provas que você confirmou e já passaram: marcar como concluída (com o tempo) e ver as concluídas.
